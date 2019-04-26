@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="James Bell" />
+
+<meta name="date" content="2019-04-25" />
+
+<title>Event Prediction with the gestate Package</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' || rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#header {
+text-align: center;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Event Prediction with the gestate Package</h1>
+<h4 class="author">James Bell</h4>
+<h4 class="date">2019-04-25</h4>
+
+
+
+<div id="introduction" class="section level2">
+<h2>1 Introduction</h2>
+<div id="vignette-overview" class="section level3">
+<h3>1.1 Vignette Overview</h3>
+<p>The gestate package is designed to assist accurate planning and event prediction for time-to-event clinical trials. In this vignette, we introduce event prediction in the gestate package. A separate vignette (“trial_planning”) introduces gestate and its trial planning tools.</p>
+<p>Section 2 will look at the two available methods for fitting parametric curves to existing data. Section 3 will then look at event prediction using these techniques.</p>
+</div>
+<div id="event-prediction" class="section level3">
+<h3>1.2 Event Prediction</h3>
+<p>Event prediction is an important aspect of trial conduct for time-to-event trials since analysis time is ultimately linked to the number of events occurring, which is in turn strongly linked to power. In cases where the analysis is directly linked to event numbers, the link is obvious, but even in trials where there is a fixed assessment time, overestimation of event numbers can lead to a severe loss of power and in these cases there will often be pressure to extend trial length. It is therefore very common to either want to know the number of events that will occur at a given time, or the time at which a given number of events will occur.</p>
+</div>
+<div id="overview-of-gestates-scope" class="section level3">
+<h3>1.3 Overview of gestate’s scope</h3>
+<p>THe gestate package supports event prediction based upon either patient-level data, or summarised life-table data. It performs parametric modelling using either Weibull or Log-normal distributions, and in cases where the approximate distribution is not known, can automatically choose the best fit. As it is based upon Curve architecture, it also supports arbitrary censoring and recruitment distributions, allowing for flexibility of assumptions. Both conditional and unconditional prediction are included. Where patient-level data is supplied, it will also produce analytic confidence intervals for predictions.</p>
+</div>
+</div>
+<div id="curve-fitting" class="section level2">
+<h2>2 Curve-Fitting</h2>
+<p>Fitting parametric distributions to a Survival curve is useful for both event prediction and for gathering trial planning assumptions. The gestate package supports curve fitting for both Weibull and Log-normal distributions on both life-table data (fit_KM) patient-level data (fit_tte_data).</p>
+<div id="example-data-set" class="section level3">
+<h3>2.1 Example Data Set</h3>
+<p>In this section, we will use the following data set generated randomly (by simulate_trials) assuming an underlying Weibull distribution with parameters alpha = 100, beta = 0.8. For more details on this step, see section 4.1 in the vignette on trial planning (“trial_planning”). The second section of this code generates a 7-day interval lifetable; this is to create a data set that can be used to illustrate the use of fit_km, which operates on life-table data, and typically if you have patient-level data available you should use that directly instead.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(gestate)</a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(survival)</a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="co"># Simulate a single data set based upon a Weibull curve with shape 0.8 and scale 100:</span></a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="co"># Distributions</span></a>
+<a class="sourceLine" id="cb1-5" title="5">example_distribution &lt;-<span class="st"> </span><span class="kw">Weibull</span>(<span class="dt">alpha=</span><span class="dv">100</span>,<span class="dt">beta=</span><span class="fl">0.8</span>)</a>
+<a class="sourceLine" id="cb1-6" title="6">example_recruitment  &lt;-<span class="st"> </span><span class="kw">LinearR</span>(<span class="dt">rlength=</span><span class="dv">24</span>,<span class="dt">Nactive=</span><span class="dv">600</span>,<span class="dt">Ncontrol=</span><span class="dv">0</span>)</a>
+<a class="sourceLine" id="cb1-7" title="7"><span class="co"># Create the full trajectory</span></a>
+<a class="sourceLine" id="cb1-8" title="8">maxtime &lt;-<span class="st"> </span><span class="dv">100</span></a>
+<a class="sourceLine" id="cb1-9" title="9">example_data_long &lt;-<span class="st"> </span><span class="kw">simulate_trials</span>(<span class="dt">active_ecurve=</span>example_distribution,<span class="dt">control_ecurve=</span>example_distribution,<span class="dt">rcurve=</span>example_recruitment,<span class="dt">assess=</span>maxtime,<span class="dt">iterations=</span><span class="dv">1</span>,<span class="dt">seed=</span><span class="dv">1234567</span>,<span class="dt">detailed_output=</span><span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb1-10" title="10"><span class="co"># Shrink the trajectory to an early time point at which event prediction will occur</span></a>
+<a class="sourceLine" id="cb1-11" title="11">example_data_short &lt;-<span class="st"> </span><span class="kw">set_assess_time</span>(example_data_long,<span class="dv">18</span>)</a>
+<a class="sourceLine" id="cb1-12" title="12"></a>
+<a class="sourceLine" id="cb1-13" title="13"><span class="co">######################</span></a>
+<a class="sourceLine" id="cb1-14" title="14"><span class="co"># Create life-table with 7-day &#39;sampling&#39;</span></a>
+<a class="sourceLine" id="cb1-15" title="15"><span class="co"># Note that this is to create an example lifetable and would not normally be done as it is typically better to use patient-level data if available</span></a>
+<a class="sourceLine" id="cb1-16" title="16">temp1  &lt;-<span class="st"> </span><span class="kw">summary</span>(<span class="kw">survfit</span>(<span class="kw">Surv</span>(example_data_short[,<span class="st">&quot;Time&quot;</span>],<span class="dv">1</span><span class="op">-</span>example_data_short[,<span class="st">&quot;Censored&quot;</span>])<span class="op">~</span><span class="st"> </span><span class="dv">1</span>,<span class="dt">error=</span><span class="st">&quot;greenwood&quot;</span>))</a>
+<a class="sourceLine" id="cb1-17" title="17">out1 &lt;-<span class="st"> </span><span class="kw">cbind</span>(temp1<span class="op">$</span>time,temp1<span class="op">$</span>n.risk,temp1<span class="op">$</span>surv,temp1<span class="op">$</span>std.err)</a>
+<a class="sourceLine" id="cb1-18" title="18">out1 &lt;-<span class="st"> </span><span class="kw">rbind</span>(<span class="kw">c</span>(<span class="dv">0</span>,out1[<span class="dv">1</span>,<span class="dv">2</span>],<span class="dv">1</span>,<span class="dv">0</span>),out1)</a>
+<a class="sourceLine" id="cb1-19" title="19"><span class="kw">colnames</span>(out1) &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Time&quot;</span>,<span class="st">&quot;NAR&quot;</span>,<span class="st">&quot;Survival&quot;</span>,<span class="st">&quot;Std.Err&quot;</span>)</a>
+<a class="sourceLine" id="cb1-20" title="20">interval &lt;-<span class="st"> </span><span class="dv">1</span></a>
+<a class="sourceLine" id="cb1-21" title="21">x1 &lt;-<span class="st"> </span><span class="kw">ceiling</span>(<span class="kw">max</span>(out1[,<span class="st">&quot;Time&quot;</span>]<span class="op">/</span>interval))<span class="op">*</span>interval</a>
+<a class="sourceLine" id="cb1-22" title="22">times1 &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dt">from =</span> <span class="dv">0</span>, <span class="dt">to =</span> x1,<span class="dt">by=</span>interval)</a>
+<a class="sourceLine" id="cb1-23" title="23">keys1 &lt;-<span class="st"> </span><span class="kw">findInterval</span>(times1,out1[,<span class="st">&quot;Time&quot;</span>])</a>
+<a class="sourceLine" id="cb1-24" title="24">example_lifetable &lt;-<span class="st"> </span>out1[keys1,]</a>
+<a class="sourceLine" id="cb1-25" title="25">example_lifetable[,<span class="st">&quot;Time&quot;</span>] &lt;-<span class="st"> </span>times1</a>
+<a class="sourceLine" id="cb1-26" title="26"></a>
+<a class="sourceLine" id="cb1-27" title="27">  </a></code></pre></div>
+</div>
+<div id="curve-fitting-life-tables-fit_km" class="section level3">
+<h3>2.2 Curve-Fitting Life-Tables: fit_KM</h3>
+<p>The fit_KM function performs a (weighted) non-linear regression on the Survival function from a life-table. It is meant for use in situations where patient-level data is unavailable, for instance where the only source of information is a Kaplan Meier plot from a publication.</p>
+<p>In general it has inferior performance to fit_tte_data in all cases where both methods can be applied. Although with the use of suitable weighting it is approximately unbiased in its parameter estimation, it is not possible to analytically obtain accurate estimates of parameter estimate variability by this method. Stochastically it can however be seen to have higher variability than patient-level MLE-based methods such as fit_tte_data.</p>
+<p>The ‘KMcurve’ argument specifies the name of the life-table, while the ‘Survival’ and ‘Time’ arguments can be used to change the names of the relevant columns. Due to the inevitable positive correlation between Survival points and the means of fitting, it works best if the input life-table has a constant interval regardless of timing of event occurrence (e.g. one point every 7 days). With an event-driven interval, it will typically be biased towards fitting parts of the dataset with the most events.</p>
+<p>The ‘type’ argument specifies which parametric curve type to fit; ‘Weibull’,‘Lognormal’ or ‘automatic’. If automatic (the default) is chosen, both Weibull and Log normal are fitted and the one with the lowest (weighted) residual sum of squares is selected. If there are any convergence issues, the ‘startbeta’ and ‘startsigma’ parameters may be used to tweak the starting parameter values for Weibull and Log normal curves respectively.</p>
+<p>To reflect that variability of the Survival function is strongly associated with the number of patients at risk, it is strongly recommended to weight the non-linear regression by the number at risk. Weighting is required by default, but may be turned off with the ‘weighting’ argument. The name of the weights column is specified by the ‘weights’ argument. By default, the weights are the values from the specified column, but the ‘weight_power’ argument optionally provides a power to raise them to.</p>
+<p>Although the fitting process returns a covariance matrix for the parameter estimates, these are heavily underestimated since the regression is performed upon data points that are highly correlated (since each KM estimate can be described as the previous one multiplied by the subsequent probability of an event).</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1"><span class="co"># Curve-fit the example lifetable in automatic mode</span></a>
+<a class="sourceLine" id="cb2-2" title="2">fit1 &lt;-<span class="st"> </span><span class="kw">fit_KM</span>(<span class="dt">KMcurve=</span>example_lifetable,<span class="dt">Survival=</span><span class="st">&quot;Survival&quot;</span>,<span class="dt">Time=</span><span class="st">&quot;Time&quot;</span>,<span class="dt">Weights=</span><span class="st">&quot;NAR&quot;</span>,<span class="dt">type=</span><span class="st">&quot;automatic&quot;</span>)</a>
+<a class="sourceLine" id="cb2-3" title="3">fit1</a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="co">#&gt; $Curvetype</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="co">#&gt; [1] &quot;Weibull&quot;</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="co">#&gt; $Parameters</span></a>
+<a class="sourceLine" id="cb2-8" title="8"><span class="co">#&gt;      Alpha       Beta </span></a>
+<a class="sourceLine" id="cb2-9" title="9"><span class="co">#&gt; 73.4954060  0.9179521 </span></a>
+<a class="sourceLine" id="cb2-10" title="10"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb2-11" title="11"><span class="co">#&gt; $VCov</span></a>
+<a class="sourceLine" id="cb2-12" title="12"><span class="co">#&gt;    Alpha_Var     Beta_Var   Covariance </span></a>
+<a class="sourceLine" id="cb2-13" title="13"><span class="co">#&gt; 90.590288609  0.003096191 -0.516469651 </span></a>
+<a class="sourceLine" id="cb2-14" title="14"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb2-15" title="15"><span class="co">#&gt; $Fit</span></a>
+<a class="sourceLine" id="cb2-16" title="16"><span class="co">#&gt;      Distribution Metric                    Value              </span></a>
+<a class="sourceLine" id="cb2-17" title="17"><span class="co">#&gt; [1,] &quot;Weibull&quot;    &quot;Weighted Sum of Squares&quot; &quot;0.391506961863065&quot;</span></a>
+<a class="sourceLine" id="cb2-18" title="18"><span class="co">#&gt; [2,] &quot;Lognormal&quot;  &quot;Weighted Sum of Squares&quot; &quot;0.590485691670357&quot;</span></a></code></pre></div>
+</div>
+<div id="curve-fitting-patient-level-data-fit_tte_data" class="section level3">
+<h3>2.3 Curve-Fitting Patient-Level Data: fit_tte_data</h3>
+<p>Maximum Likelihood Estimation (MLE) is a more efficient method than non-linear regression of the Kaplan Meier curve and also allows for reasonable quantification of errors. fit_tte_data uses the Survfit R function to MLE fit Weibull or Log normal parametric curves to the Survival function. Where patient-level data is available, it is therefore recommended to use fit_tte_data over fit_KM.</p>
+<p>The ‘data’ argument specifies the data set, while the ‘Time’ and ‘Event’ arguments provide the column names for the times and event indicators respectively. The ‘censoringOne’ argument tells the function whether a 1 represents a censoring (TRUE) or an event (FALSE, default). As with fit_KM, the ‘type’ argument gives a choice of Weibull, Log normal or automatic fitting. In automatic mode, the selection is based on the higher log-likelihood (since both distributions have 2 parameters, this corresponds to the lower AIC). The ‘init’ argument may be used to provide starting values to Survfit; this will not work in automatic mode however.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="co"># Curve-fit the example lifetable in automatic mode</span></a>
+<a class="sourceLine" id="cb3-2" title="2">fit2 &lt;-<span class="st"> </span><span class="kw">fit_tte_data</span>(<span class="dt">data=</span>example_data_short,<span class="dt">Time=</span><span class="st">&quot;Time&quot;</span>,<span class="dt">Event=</span><span class="st">&quot;Censored&quot;</span>,<span class="dt">censoringOne=</span><span class="ot">TRUE</span>,<span class="dt">type=</span><span class="st">&quot;automatic&quot;</span>)</a>
+<a class="sourceLine" id="cb3-3" title="3">fit2</a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="co">#&gt; $Curvetype</span></a>
+<a class="sourceLine" id="cb3-5" title="5"><span class="co">#&gt; [1] &quot;Weibull&quot;</span></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb3-7" title="7"><span class="co">#&gt; $Parameters</span></a>
+<a class="sourceLine" id="cb3-8" title="8"><span class="co">#&gt;      Alpha       Beta </span></a>
+<a class="sourceLine" id="cb3-9" title="9"><span class="co">#&gt; 74.9044606  0.8971022 </span></a>
+<a class="sourceLine" id="cb3-10" title="10"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb3-11" title="11"><span class="co">#&gt; $VCov</span></a>
+<a class="sourceLine" id="cb3-12" title="12"><span class="co">#&gt;  Alpha_Var   Beta_Var Covariance </span></a>
+<a class="sourceLine" id="cb3-13" title="13"><span class="co">#&gt; 427.253348   0.010806  -1.827576 </span></a>
+<a class="sourceLine" id="cb3-14" title="14"><span class="co">#&gt; </span></a>
+<a class="sourceLine" id="cb3-15" title="15"><span class="co">#&gt; $Fit</span></a>
+<a class="sourceLine" id="cb3-16" title="16"><span class="co">#&gt;      Distribution Metric           Value              </span></a>
+<a class="sourceLine" id="cb3-17" title="17"><span class="co">#&gt; [1,] &quot;Weibull&quot;    &quot;Log-Likelihood&quot; &quot;-300.998710542156&quot;</span></a>
+<a class="sourceLine" id="cb3-18" title="18"><span class="co">#&gt; [2,] &quot;Lognormal&quot;  &quot;Log-Likelihood&quot; &quot;-303.185871359364&quot;</span></a></code></pre></div>
+<p>Both fitting functions return a list with the type of Curve that has been fit, the parameters, and finally the components of the covariance matrix of the fit.</p>
+</div>
+</div>
+<div id="event-prediction-event_prediction" class="section level2">
+<h2>3 Event Prediction: event_prediction</h2>
+<div id="introduction-1" class="section level3">
+<h3>3.1 Introduction</h3>
+<p>The event_prediction function uses a combination of fit_tte_data and the numerical integration approaches found in nph_traj to produce estimates for event numbers at any given time point. There are four main inputs required for event prediction: Firstly a patient-level data set from which an event Curve can be estimated (‘data’). Secondly, an RCurve reflecting the combined already-observed recruitment and predicted future recruitment (‘rcurve’). Thirdly, a Curve reflecting the dropout censoring in the trial (‘dcurve’). Finally, optionally, a set of parameters describing what has actually been observed at the interim time point, to allow for conditional predictions; these are described in section 3.5.</p>
+<p>Particular care should be paid to time units since measured event times are typically in days, while recruitment and timeline planning are typically in months (see section 3.2 for more on time units). event_prediction assumes that all times are in units of months, except for the event times, which may be in units of days (default) or months; this is controlled by the optional ‘units’ argument.</p>
+</div>
+<div id="event-curve-fitting" class="section level3">
+<h3>3.2 Event Curve Fitting</h3>
+<p>Section 2.3 describes the MLE fitting process and the arguments required for this. All of these arguments carry over into event_prediction.</p>
+</div>
+<div id="recruitment-specification" class="section level3">
+<h3>3.3 Recruitment Specification</h3>
+<p>The RCurve for an event prediction should have units of months and typically be a PieceR since the exact numbers of patients that have so far entered the trial in each month will be known. The program does not consider variability in future recruitment as it is expected that by the point that event prediction is performed a sizeable amount of recruitment will have already occurred, and the variability in future recruitment will be both low and subject to negative feedback (i.e. if it drops, efforts are made to increase it and vice versa).</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1"><span class="co"># Create an RCurve incorporating both observed and predicted recruitment</span></a>
+<a class="sourceLine" id="cb4-2" title="2">recruit &lt;-<span class="st"> </span><span class="kw">PieceR</span>(<span class="kw">matrix</span>(<span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">1</span>,<span class="dv">12</span>),<span class="dv">10</span>,<span class="dv">15</span>,<span class="dv">25</span>,<span class="dv">30</span>,<span class="dv">45</span>,<span class="dv">60</span>,<span class="dv">55</span>,<span class="dv">50</span>,<span class="dv">65</span>,<span class="dv">60</span>,<span class="dv">55</span>,<span class="dv">30</span>),<span class="dt">ncol=</span><span class="dv">2</span>),<span class="dv">1</span>)</a></code></pre></div>
+</div>
+<div id="censoring-specification" class="section level3">
+<h3>3.4 Censoring Specification</h3>
+<p>The amount of dropout censoring varies wildly between trials. The endpoint Overall Survival (OS) ought to have minimal dropout that does not tangibly affect event prediction, whereas other endpoints are likely to have enough that it warrants consideration. A dropout distribution can be supplied to event_prediction via the ‘dcurve’ argument.</p>
+<p>It is suggested to use fit_KM or fit_tte_data to curve-fit a version of the data where dropouts are handled as events, while administrative censoring and events are handled as censored. This should produce a reasonable estimate for censoring unconditional on event occurrence (assuming independent censoring).</p>
+</div>
+<div id="conditioning" class="section level3">
+<h3>3.5 Conditioning</h3>
+<p>To calculate conditional predictions, it is necessary to specify the number of observed events at a given time, as well as preferably the number of patients remaining at risk (total number intended to be recruited minus events occurred, minus dropouts). The conditional number at risk is important because if it is known that a larger-than-expected number of patients have dropped out, then it is clear this will lower the future expected rate of events (as fewer patients than expected are at risk). Conditional predictions can be enabled by the ‘condition’ argument. The conditional time is then specified by ‘cond_Time’, conditional events by ‘cond_Events’ and conditional number at risk by ‘cond_NatRisk’. If the latter is not known, the expected number at risk will be used as a default.</p>
+</div>
+<div id="accounting-for-effects-of-adjudication" class="section level3">
+<h3>3.6 Accounting for Effects of Adjudication</h3>
+<p>For trials with adjudication it is common for event prediction to be performed upon the investigator-reported numbers due to delays in adjudication. However, typically a proportion of adjudicated events will be ‘down-adjudicated’, resulting in events used in the prediction not being ‘valid’. To account for this net down-adjudication (and the rarer case of net up-adjudication), the ‘discountHR’ argument is available. If it is assumed that patients remain at risk after an observed event, ‘discountHR’ corresponds to the probability of an event being adjudicated as true. It applies a discount hazard ratio to the fitted event curve to reflect this. In essence, fewer events are predicted initially, but since the patients remain at risk, the predictions after the discount is applied will slowly catch up with the predictions without the discount. This approach can also be used in cases of up-adjudication where patients may be found to retrospectively have had an event at a later stage - here the value should be above 1. ‘This argument’discountHR’ may only be used in conjunction with a Weibull curve since Log normal curves are not subject to proportional hazards. If patients are no longer at risk following an event (e.g. if trial participation is ended) but they may still be down-adjudicated, then this may instead be handled by simply multiplying all predicted event numbers by the probability of adjudication as an event.</p>
+</div>
+<div id="calculations" class="section level3">
+<h3>3.7 Calculations</h3>
+<p>A Curve object is created from the fitted parameters. This is combined with the recruitment RCurve and censoring Curve to produce estimates of the expected event numbers at each integer time point using the same approach as nph_traj. Conditioned trajectories are created by scaling future events by the ratio of the conditioned number at risk to the expected number at risk at the conditioning time. The scaled number of additional events is then added to the conditioned number of events. Where no conditioned number at risk is provided, gestate assumes by default that it is the expected number minus the difference between conditioned and expected event numbers at the conditioning time; i.e. that each additional observed event than expected reduces the expected number at risk by one.</p>
+<p>The estimation errors for the parameters are also carried over into the event prediction calculation and propagated through by the delta method to enable the estimation of standard errors on both the conditional and unconditional expected trajectories. The conditional standard error is always lower at any given time, particularly close to the time of conditioning (and it is 0 at that time). The standard errors of the trajectories are then combined with the number at risk and the event numbers via a beta binomial distribution to create confidence intervals for the conditional and unconditional predicted trajectories.</p>
+<p>The ‘CI’ argument specifies the width of confidence interval to produce, by default 0.95 (95%).</p>
+<p>A paper on the general approach to analytic confidence intervals and the formulae for the calculations are to be published.</p>
+</div>
+<div id="plotting" class="section level3">
+<h3>3.8 Plotting</h3>
+<p>For convenience, there is an inbuilt plotting function for event prediction output; plot_ep. This is designed to automatically read output from event_prediction, so only requires the ‘data’ argument, specifying the name of the event_prediction output. By default, it makes use of the available information, plotting the unconditional trajectory with prediction CI, as well as the conditional ones if available. The arguments ‘trajectory’ and ‘which_CI’ can be used to eliminate some or all of these lines, while prediction_fitting can be used to switch to switch to CIs of fitting rather than prediction.</p>
+<p>To plot the observed events as well, an observed event trajectory may also be supplied through the ‘observed’ argument. This accepts either a vector of events, corresponding to the values at times 1,2,3…, or a 2-column matrix / data-frame with the first column the time points in ascending order, and the second the event numbers.</p>
+<p>A target number of events may also be specified using the ‘target’ argument. The optional ‘max_time’ and ‘max_E’ options override the automatic plotting area dimensions, while the ‘legend_position’ and ‘no_legend’ arguments control the legend positioning and whether it is displayed at all. Standard graphical arguments are also accepted.</p>
+</div>
+<div id="example" class="section level3">
+<h3>3.9 Example</h3>
+<p>We first create a new example data set with piecewise recruitment using the simulate_trials function in gestate:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="co"># Create the full length trial showing what &#39;actually&#39; happens</span></a>
+<a class="sourceLine" id="cb5-2" title="2">trial_long &lt;-<span class="st"> </span><span class="kw">simulate_trials</span>(<span class="dt">active_ecurve=</span><span class="kw">Weibull</span>(<span class="dv">50</span>,<span class="fl">0.8</span>),<span class="dt">control_ecurve=</span><span class="kw">Weibull</span>(<span class="dv">50</span>,<span class="fl">0.8</span>),<span class="dt">rcurve=</span>recruit,<span class="dt">fix_events=</span><span class="dv">200</span>,<span class="dt">iterations=</span><span class="dv">1</span>,<span class="dt">seed=</span><span class="dv">12345</span>,<span class="dt">detailed_output=</span><span class="ot">TRUE</span>)</a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="co"># Create a shortened version with data for use in the event prediction</span></a>
+<a class="sourceLine" id="cb5-4" title="4">trial_short &lt;-<span class="st"> </span><span class="kw">set_assess_time</span>(<span class="dt">data=</span>trial_long,<span class="dt">time=</span><span class="dv">10</span>,<span class="dt">detailed_output =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="co"># Create the trajectory of events</span></a>
+<a class="sourceLine" id="cb5-6" title="6">maxtime &lt;-<span class="st"> </span><span class="kw">max</span>(<span class="kw">ceiling</span>(trial_long[,<span class="st">&quot;Assess&quot;</span>]))</a>
+<a class="sourceLine" id="cb5-7" title="7">events &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="ot">NA</span>,maxtime)</a>
+<a class="sourceLine" id="cb5-8" title="8"><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>maxtime){</a>
+<a class="sourceLine" id="cb5-9" title="9">  events[i] &lt;-<span class="st"> </span><span class="kw">sum</span>(<span class="dv">1</span><span class="op">-</span><span class="kw">set_assess_time</span>(trial_long,i)[,<span class="st">&quot;Censored&quot;</span>])</a>
+<a class="sourceLine" id="cb5-10" title="10">}</a></code></pre></div>
+<p>The ‘trial_short’ object contains the patient data observable at the time of event prediction (10 months). Note that a ‘1’ in the Censored column denotes a censoring, so the censoringOne argument needs to be set to TRUE, and that the unit of time is in months, so the units argument must be “Months”. For real patient data it is more usual to have units of days, which is the default.</p>
+<p>‘recruit’ (see section 2.3) contains the observed and predicted patient recruitment as an RCurve object. ‘events’ contains the numbers of events observed at each time point (both before and after prediction) and can be used to assess performance. At the time of event prediction, 10, there are 47 observed events and the number at risk is 500-47= 453; these will be the conditioning parameters. We assume that there is no dropout censoring.</p>
+<p>We can now perform a simple event prediction using Weibull curve type selection:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">predictions &lt;-<span class="st"> </span><span class="kw">event_prediction</span>(<span class="dt">data=</span>trial_short, <span class="dt">Event=</span><span class="st">&quot;Censored&quot;</span>, <span class="dt">censoringOne=</span><span class="ot">TRUE</span>, <span class="dt">type=</span><span class="st">&quot;Weibull&quot;</span>, <span class="dt">rcurve=</span>recruit,<span class="dt">max_time=</span><span class="dv">60</span>, <span class="dt">condition=</span><span class="ot">TRUE</span>, <span class="dt">cond_Events=</span><span class="dv">49</span>, <span class="dt">cond_NatRisk=</span><span class="dv">451</span>, <span class="dt">cond_Time=</span><span class="dv">10</span>, <span class="dt">units=</span><span class="st">&quot;Months&quot;</span>)</a></code></pre></div>
+<p>We can then plot the conditional trajectory, with confidence intervals, alongside the events that were (or will be) observed at each time point:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1"><span class="co"># Plot observed events and conditional predictions</span></a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="kw">plot_ep</span>(predictions,<span class="dt">trajectory=</span><span class="st">&quot;conditional&quot;</span>,<span class="dt">which_CI=</span><span class="st">&quot;conditional&quot;</span>,<span class="dt">max_time=</span><span class="dv">40</span>,<span class="dt">observed=</span>events,<span class="dt">target=</span><span class="dv">200</span>,<span class="dt">max_E=</span><span class="dv">200</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" style="display: block; margin: auto;" /></p>
+<p>The plot shows a reasonable agreement between the observed trajectory and the estimated conditional trajectory, which predicts 200 events would be reached by month 29. However, the 95% confidence interval is wide (particularly on the lower bound), and the CI for the time to reach 200 events is 22-55 months. In practice therefore, event prediction at this time point is not that useful for estimating a trial end date.</p>
+<p>We can now revisit the event prediction at two later time points (14 and 18 months), and compare the prediction accuracies:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">trial_less_short &lt;-<span class="st"> </span><span class="kw">set_assess_time</span>(<span class="dt">data=</span>trial_long,<span class="dt">time=</span><span class="dv">14</span>,<span class="dt">detailed_output =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb8-2" title="2">predictions2 &lt;-<span class="st"> </span><span class="kw">event_prediction</span>(<span class="dt">data=</span>trial_less_short, <span class="dt">Event=</span><span class="st">&quot;Censored&quot;</span>,<span class="dt">censoringOne=</span><span class="ot">TRUE</span>, <span class="dt">type=</span><span class="st">&quot;Weibull&quot;</span>, <span class="dt">rcurve=</span>recruit,<span class="dt">max_time=</span><span class="dv">60</span>, <span class="dt">condition=</span><span class="ot">TRUE</span>,                               <span class="dt">cond_Events=</span><span class="dv">101</span>,<span class="dt">cond_NatRisk=</span><span class="dv">399</span>,<span class="dt">cond_Time=</span><span class="dv">14</span>, <span class="dt">units=</span><span class="st">&quot;Months&quot;</span>)</a>
+<a class="sourceLine" id="cb8-3" title="3"></a>
+<a class="sourceLine" id="cb8-4" title="4">trial_mature &lt;-<span class="st"> </span><span class="kw">set_assess_time</span>(<span class="dt">data=</span>trial_long,<span class="dt">time=</span><span class="dv">18</span>,<span class="dt">detailed_output =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb8-5" title="5">predictions3 &lt;-<span class="st"> </span><span class="kw">event_prediction</span>(<span class="dt">data=</span>trial_mature, <span class="dt">Event=</span><span class="st">&quot;Censored&quot;</span>,<span class="dt">censoringOne=</span><span class="ot">TRUE</span>, <span class="dt">type=</span><span class="st">&quot;Weibull&quot;</span>, <span class="dt">rcurve=</span>recruit,<span class="dt">max_time=</span><span class="dv">60</span>, <span class="dt">condition=</span><span class="ot">TRUE</span>,                               <span class="dt">cond_Events=</span><span class="dv">148</span>,<span class="dt">cond_NatRisk=</span><span class="dv">352</span>,<span class="dt">cond_Time=</span><span class="dv">18</span>, <span class="dt">units=</span><span class="st">&quot;Months&quot;</span>)</a></code></pre></div>
+<p><img src="data:image/png;base64,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" style="display: block; margin: auto;" /><img src="data:image/png;base64,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" style="display: block; margin: auto;" /></p>
+<p>Only 4 months later, the 95% CI is down to 23-34 months, with an estimate of 27 months, while by 18 months, a tight 95% CI of 23-27 months is possible around an estimate of 25 months. The tightening of the CI over time is partly due to a reduction in the number of events remaining to be predicted, but also the increasing precision with which the parameters of the parametric Kaplan Meier curve fit. As a rule of thumb, 100 observed events appear to be required to give reasonable precision of estimation of Weibull parameters, but the greater the length of extrapolation required, the more precise the estimates have to be to give useful accuracy.</p>
+<p>The conditional confidence interval can therefore demonstrate that in this case where a target of 200 events is desired, event prediction is probably too inaccurate to be of use at 10 months, somewhat indicative at 14 months, and fairly accurate by 18 months. As the trial has ‘progressed’, the estimate of the time of finishing has dropped from 29 months to 27 months and then again to 25 months. Depending on tolerance for risk, it may be more useful to use a smaller CI e.g. 80 or 90%.</p>
+<p>It should be noted that all of these CIs are dependent upon the underlying distribution being Weibull, and that the same distribution applies to all patients, irrespective of e.g. the time of recruitment. They also depend on the recruitment distribution being fixed, i.e. containing no variability - this may be unreasonable for predictions at a very early time point. These limitations will tend to lead to the interval being narrower than it ought. Conversely, the confidence intervals do not account for knowledge obtained from prior trials or beliefs from the trial design stage; if there are strong prior expectations aligned with the observed data then the confidence interval may be wider than it need be.</p>
+</div>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,400 @@
+---
+title: "Planning Time-To-Event Trials with gestate"
+author: "James Bell"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Planning Time-To-Event Trials with gestate}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## 1 Introduction
+
+### 1.1 Vignette Overview
+The gestate package is designed to assist accurate planning and event prediction for time-to-event clinical trials. In this vignette, we introduce the gestate package, and demonstrate how it may be used in trial planning. A separate vignette covers event prediction of ongoing trials. The first section will show how distributions are easily described and stored as Curve and RCurve objects. The second section will demonstrate analytic methods for trial planning, and the third section will show how simulate may be alternatively used. 
+
+### 1.2 Exponential Distributions 
+The least possible information required to calculate a time-to-event trial's predicted properties are distributions of events in each arm and an expected distribution of patient recruitment, including the numbers in each arm. However typically event distributions are over-simplified by implicitly assuming exponential distributions and then defining them by a single number (often the median). This shortcut is not available in gestate Since events in many clinical trials do not follow exponential distributions and assuming this without evidence can lead to wildly inaccurate trial planning. Even where no historical information is available and an exponential distribution can be considered to be the best guess, it is important to be clear that there is an assumption being made that the distribution is exponential. Gestate therefore requires explicit selection of distribution types, as well as their parameters, and does not default to exponential.
+
+### 1.3 Non-Proportional Hazards and Complex Censoring
+Aside from simplicity, one of the historical reasons for use of the exponential distribution was a requirement for proportional hazards in many analysis methods, although this should not have prevented use of Weibull distributions. With the rising importance of non-proportional hazards in clinical trials, it is important that trial planning methods can handle both the expected patterns of events and also analytical approaches that are more suited to this situation. To date, this has mainly been done by simulation, with the standard drawbacks of having to account for Monte Carlo error and being relatively slow. Gestate's numerical integration methods and Curve architecture for handling distributions are designed to handle unusual event distributions as well as complex censoring patterns, and to produce calculations for a range of analytical methods. These approaches are extremely fast in comparison to simulation, and generally quite accurate. Simulation tools have also been provided to assist in validating output, but it is intended that the user arrives at their preferred sample size and then validates it by simulation - this workflow is designed to produce a considerable time-saving.
+
+### 1.4 Power Calculation vs Sample Size Calculation
+The gestate package is designed around power calculation rather than sample size calculation. While the reasoning behind this is obvious in the case of the simulation aspect, here is a brief explanation for this with the analytic approach. 
+
+First, it should be noted that changing the sample size more than trivially without changing the length or shape of recruitment is logistically difficult. The length and shape of recruitment are also important for calculating the number of events at any given time. So any 'sample size optimisation' approach must either make the probably unrealistic assumption that the rate of recruitment can be scaled freely, or it must have an algorithm for changing other recruitment parameters. As trial logistics vary widely, it is unlikely that a sensible general-purpose algorithm would be possible, and even if it were, it would complicate optimisation of sample size. Therefore, although gestate does provide an option to estimate a sample size that would produce a given power at each time point, it does so based on the unrealistic free recruitment-rate scaling assumption, and it is best used as an indication of the scenario to next calculate power for.
+
+A further complicating factor for direct sample size calculation is that the correspondance between event numbers and power is not absolute, even for log-rank tests. Particularly when randomisation ratios are not 1:1, it can be shown that the 'maturity' of the data (and in particular the ratio of events between arms) affects the number of events required for a given power. This is highlighted by the inclusion of the Frontier Power method for power calculation that is included in the package and which is a generalisation of the Schoenfeld formula to handle unequal randomisation ratios appropriately. Since data maturity affects power, simply scaling the sample size to achieve the desired number of events may not give you the required power^1^.
+
+### 1.5 Shiny App
+The gestate package contains a built-in Shiny App to implement most of the functionality covered in this vignette. 
+
+It may be run by the command 'run_gestate()'. 
+
+The app contains real-time interactive plots for the currently specified Curves and RCurve. Updating them will also update the plots. This can be useful for checking parameterisation. Most functionality is covered, and both analytic and simulation approaches are included. Most parameters and arguments are shared between the two approaches, so once one is run, it is trivial to also run the other. All plots and tables created are downloadable. 
+
+In general, it is recommended to use the app for interactive, low-throughput sessions, perhaps when there is uncertainty about parameters. It also makes a good starting point for new users of gestate. Use of gestate directly in R is recommended for higher throughput workflows, systematic searching of parameters, or where outputs are fed into other programs.  
+
+## 2 Curves
+
+### 2.1 Event and Censoring Distribution Description and Storage: Curve Objects
+The gestate package is built upon Curve objects, named because they describe a Survival curve. These contain all necessary information about probability distributions that may be useful for planning time-to-event trials, including both the parameters and the names of functions governing its behaviour. 
+
+Curve objects serve three main purposes; they allow the gestate code to be independent of the distributions it runs, allow the free interchange and combination of different distributions, and provide a convenient format for holding all relevant information about a distribution.
+
+So long as a distribution is supported, a user may create a Curve object by using a (constructor) function corresponding to the distribution of interest, providing its parameters as arguments. 
+
+gestate V1.3.x comes with the following distributions supported as Curve objects:
+
+| Distribution | Function    | Parameter Arguments | S(t) |
+|:-------------|:------------|:--------------------|:------|
+| Exponential  | Exponential | lambda           | $e^{- \lambda t}$  |
+| Weibull      | Weibull     | alpha, beta      | $e^{-(t/\alpha)^\beta)}$  |
+| Log-Normal   | Lognormal   | mu, sigma        | $0.5(1+erf\left(\frac{\log(t)-\mu }{\sigma\sqrt2}\right))$                            |
+| Log-Logistic | LogLogistic | theta, eta       | $\frac{t^{\eta}}{\theta^{\eta}+t^{\eta}}$              |
+| Gompertz     | Gompertz    | theta, eta       | $e^{\eta - \eta e^{\theta t}}$                 |
+| Generalised Gamma     | GGamma | theta, eta, rho  | $\frac{\Gamma(\eta,(t/\theta)^\rho)}{\Gamma(\eta)}$               |
+| Piecewise-Exponential | PieceExponential | start, lambda | $\prod_{x = 1}^{len(\mathbf{\lambda})} e^{- \lambda_x t_x}$ where $t_x = \min{(start_{x+1},(\max{(0,t-start_x)}))}$ $start_{x+1} = Inf$ if otherwise undefined.|
+| Mixture-Exponential   | MixExp | props, lambdas | $p_{1}e^{- \lambda_{1} t} + p_{2}e^{- \lambda_{2} t} + ...$ |
+| Mixture-Weibull       | MixWei | props, alphas, betas | $p_{1}e^{-(t/\alpha_{1})^{\beta_{1})}} + p_{1}e^{-(t/\alpha_{2})^{\beta_{2})}}+...$ |
+| Null         | Blank       |                  | $1$     |
+
+Event distributions and dropout-censoring distributions must be provided to gestate in Curve format. An example of defining a Curve is as follows:
+
+```{r}
+library(gestate)
+# Define a Weibull curve with shape 0.8 and scale 200:
+curve1 <- Weibull(alpha=200,beta=0.8)
+# Show the specified curve
+curve1
+```
+
+Where you want to make an event / censoring impossible, you can use define a null Curve by the function Blank(). Typically, this is the starting point for calculations (the 'practical default'), and is useful where no dropout censoring is required. The null curve is also the default within gestate for the dropout censoring distribution.
+
+### 2.2 Recruitment distribution description and storage: RCurve
+
+Recruitment-associated distributions use a special form of Curve object; the RCurve. This differs in several ways. Firstly, it also includes details of patient numbers for two arms; an active arm and a control arm. Secondly, it stores the distribution of patient recruitment, rather than a censoring distribution. This is because the 'censoring distribution' can only be defined in conjunction with an assessment time.
+
+gestate V1.3.x comes with the following recruitment distributions supported as RCurve objects:
+
+| Distribution | Function | Parameter Arguments | Notes                 |
+|:-------------|:---------|:--------------------|:----------------------|
+| Linear       | LinearR  | rlength, Nactive, Ncontrol | Standard linear recruitment |
+| Instant      | InstantR | Nactive, Ncontrol  | All patients in trial for same duration |
+| Piecewise-linear   | PieceR | recruitment, ratio | Recruitment is two-column matrix of durations and rates|
+
+```{r}
+# Define a linear recruitment over 12 months with 100 patients in each arm:
+rcurve1 <- LinearR(rlength=12,Nactive=100,Ncontrol=100)
+rcurve1
+
+# Define a more complex recruitment with increasing rates
+pieces <- matrix(c(1,2,3,4,5,10,15,32.5),ncol=2)
+#Matrix to create a piecewise recruitment distribution. First column should be duration, second column should be rate.
+pieces
+rcurve2 <- PieceR(recruitment=pieces,ratio=1)
+
+# Show the specified piecewise curve
+rcurve2
+```
+
+## 3 Analytic Planning of Time-to-Event Trials: nph_traj 
+
+Common questions in planning time to event trials include what the expected number of events, survival function, power or width of HR confidence interval will be at any given time. In non-proportion hazards situations, the expected hazard ratio or difference in RMST at a given time (including power to test them) may also be of interest. nph_traj is designed to analytically answer these questions and to do so in real-time.
+
+nph_traj uses numerical integration techniques to calculate expected event numbers in each arm at each time point and from these derives predicted properties for the log-rank test and Cox regression using an approach based upon the Pike approximation for the HR^2^. Separate numerical integration approaches are also used to predict standard errors for RMST and landmark analysis in the presence of censoring and hence calculate power for these analyses.
+
+Due to the interchangeability of Curve objects and the flexibility afforded by numerical integration, the nph_traj function can therefore be used to analytically calculate expected properties over time of a time-to-event trial, even under non-proportional hazards or with complex censoring distributions and hence also derive power trajectories for multiple common analysis methods.
+
+nph_traj makes no explicit assumptions about the unit of time, only that all inputs have the same unit. In practice however, it is usually most convenient for clinical trial planning to use units of months. nph_traj creates trajectories with one entry at each integer time, so using units of years will typically lead to overly-granular trajectories. Conversely, using e.g. units of days or weeks is typically impractical (as recruitment data is typically summarised by month), slow (due to the increased number of calculations), and over-precise (time lags and uncertainties typically ensure that timings to the nearest month are of most relevance).
+
+### 3.1 Getting started: Simple Log-Rank and Hazard-Ratio Calculations
+
+At a minimum, nph_traj requires a Curve object to describe the distribution of each of the active and control arms ('active_ecurve' and 'control_ecurve' arguments respectively), as well as an RCurve object ('rcurve' argument) to describe the recruitment distribution. For more information on Curve and RCurve objects, see section 2. The distributions of the active and control arms should typically be estimated based upon parameters or curve-fitting from previous trials (using e.g. fit_KM or fit_KM_tte_data from the gestate package; see the event_prediction vignette).
+
+Example call:
+```{r}
+# Define exponential distributions for active and control arms, with HR of 0.7
+controlCurve <- Exponential(lambda=0.1)
+activeCurve <- Exponential(lambda=0.1*0.7)
+
+# Define a linear recruitment of 400 patients
+rcurve3 <- LinearR(rlength=12,Nactive=200,Ncontrol=200)
+
+# Run nph_traj with default settings to calculate expected properties up to 10 months
+output <- nph_traj(active_ecurve=activeCurve,control_ecurve=controlCurve,rcurve=rcurve3,max_assessment=10)
+
+```
+
+
+### 3.2 Interpreting Output
+```{r}
+# Show output from previous section
+output
+```
+The output from nph_traj is a list, with the first few entries corresponding to the input Curve and RCurve objects to provide context to the results. The results themselves are found under $Summary and are in the form of a trajectory, providing information about the trial at each integer time point up to the maximum assessment time ('max_assessment' argument). 
+
+Each row corresponds to a separate time point, given by the first column;'Time'. The second column, 'Patients' gives the expected number of patients entered into the trial by that time. The three 'Events' columns give the expected numbers of events in each arm and overall at each time.The next three columns provide the Hazard Ratio, Log-Hazard Ratio and SE of the Log-Hazard Ratio. Finally, the power for the log-rank test / Cox regression are given based upon the Schoenfeld^3,4^ and Frontier^1^ methods.
+
+### 3.3 Censoring
+
+Administrative censoring is handled implicitly based upon the specified RCurve object. However, dropout censoring is also common in time-to-event trials. This can be specified through Curve objects, and separate censoring distributions are supported for each arm. By default, gestate uses no censoring via the Blank() Curve.
+
+It should be noted that the required censoring distributions must represent that of the censoring that would occur in the absence of events or administrative censoring. The observed numbers of censored patients in each arm will therefore also depend partially on the event distributions. The suggested way to use existing data to parameterise the censoring distributions is to create 'reverse Kaplan Meier' plots of existing data, whereby dropout censorings are 'events', and both events and administrative censorings are 'censorings'. Curve-fitting techniques (e.g. fit_KM or fit_KM_tte_data from gestate, see event_prediction vignette) may then be used to estimate the parametric distributions.
+
+### 3.4 Other/Advanced Options
+
+To control the one-sided type I error for power calculations, the 'alpha1' argument may be used. This is 0.025 by default.
+
+An additional feature of nph_traj is it can estimate the required number of patients to achieve a given power at a given time point (using Schoenfeld), assuming all parameters remain constant (only the rate of recruitment changes to allow patient number to change in the existing specified time frame). This can be requested by setting the 'required_power' argument to the required decimal, e.g. 0.9 for 90% power. For sample size calculations it is strongly recommended to only use this as a guide of the next set of parameters to try, and to rerun the calculation. This is because unless the number is similar to that in the existing RCurve, it will typically require changing the recruitment length to reach the new number, and that will result in changes to the calculation.
+
+It is also possible to get more detailed outputs by specifying 'detailed_output=TRUE'. This includes several additional quantities required by the calculations or derived from them. Full details may be found in the documentation of the nph_traj function (via e.g. ?nph_traj). 
+
+```{r}
+# Define exponential distributions for active and control arms, with HR of 0.7
+censorCurveA <- Exponential(lambda=0.001)
+censorCurveC <- Exponential(lambda=0.002)
+
+# Run nph_traj with default settings to calculate expected properties up to 10 months
+output1 <- nph_traj(active_ecurve=activeCurve,control_ecurve=controlCurve,active_dcurve=censorCurveA,control_dcurve=censorCurveC,rcurve=rcurve3,max_assessment=10,detailed_output = TRUE,required_power = 0.9)
+# Display output
+output1
+
+```
+
+### 3.5 Planning for Landmark and RMST Analysis
+
+nph_traj can be provided essentially any valid Curve object for each event distribution, and fully supports non-proportional hazards. To take full advantage of this, it can calculate expectations for landmark and RMST quantities, along with the estimated standard errors and power calculations.
+
+To request RMST calculations, include the argument 'RMST = x', where x is the restriction time of interest. To request landmark calculations, include the argument 'landmark = y', where y is the landmark time of interest. Here is an example of a non-proportional hazards calculation where estimates of power for both RMST and landmark calculations are requested:
+
+```{r}
+# Define exponential distributions for active and control arms, with HR of 0.7
+activeCurveNPH <- Weibull(alpha=100,beta=0.8)
+controlCurveNPH <-  Weibull(alpha=50,beta=1)
+
+# Run nph_traj with default settings to calculate expected properties up to 30 months
+output2 <- nph_traj(active_ecurve=activeCurveNPH,control_ecurve=controlCurveNPH,rcurve=rcurve3,max_assessment=30,RMST=20,landmark=20)
+# Display output
+output2
+
+```
+
+All of the RMST output columns are prefixed RMST_ . The first column, RMST_Restrict reports the restriction time, then RMST_Active, RMST_Control and RMST_Delta provide the RMST estimates for each arm and the difference between them. Following them, RMST_SE provides the SE for the difference, RMST_Z provides the expected Z score, and RMST_Power the power.Finally, RMST_Failure provides the probability that the RMST calculation will fail due to one or both of the arms having an incalculable RMST (caused by the Survival curve being undefined at the time of restriction).
+
+All of the landmark output columns are prefixed LM_. The first column, LM_Time reports the time of the landmark analysis. LM_Active and LM_Control  then give the estimates of S(t) for each arm, and LM_Delta that for the difference. LM_A_SE, LM_C_SE and LM_D_SE then give the corresponding standard errors. Finally LM_Z and LM_Power provide the expected Z score and power.
+
+### 3.6 Plotting nph_traj Output
+
+A plotting function, plot_npht is available to provide some commonly-useful trajectory plots for nph_traj output.
+
+By default, this produces plots of the Survival functions for the event distributions (a KM plot), the CDFs of the censoring distributions, recruited patients over time, expected total events over time, expected HR over time (with predicted CI), and a plot of power over time for all available methods in the data.
+
+```{r, fig.show='hold',fig.height = 5, fig.width = 7, fig.align = "center"}
+# Plot output from nph_traj
+plot_npht(output2)
+
+```
+
+The first three of these are useful for checking assumptions, to e.g. check that the distributions are reasonable and what was wanted. The expected event plot is helpful for setting expectations for trial conduct of event numbers. The logHR plot is useful in non-proportional hazards trials for looking at how the expected HR will change over time; the predicted CI for it also allows a straightforward observation of the time at which the HR will become significant. Finally, the power plot allows the evolution of the power over time to be observed, and comparisons to be made between the different analysis methods.
+
+All plots are produced by default, but each individual plot may be disabled via arguments, and likewise arguments may be used to prevent the plotting of individual trajectories from the power plot. Standard plotting arguments may also be passed to it, e.g. regarding text size.
+
+## 4 Simulating Trial Properties 
+
+### 4.1 Simulating Data: simulate_trials
+
+Simulating trials is an alternative to direct property calculation. As it is much slower, introduces Monte Carlo error and can only simulate one assessment time per run, it is recommended to use it primarily to check analytic results from nph_traj or as a starting point for simulating more complex cases that are beyond the scope of nph_traj.
+
+Syntax for simulate_trials is very similar to that of nph_traj, and the same Curves and RCurve can be passed to it via the same argument names (e.g. 'active_ecurve'; see section 3.1 for more details). As with nph_traj, it is minimally required to specify distribution Curve objects for the active and control arms, as well as an RCurve object describing the recruitment. For further details on Curve/RCurve objects, please see section 2. 
+
+In addition to these similar inputs, two simulation-specific arguments are also required; the number of simulation iterations to run ('iterations') and the random seed to use ('seed'). Finally, it is also necessary to specify either a time ('assess'), or a fixed number of events ('fix_events') to analyse at. If both are specified, the fixed event number will be used.
+
+Four columns are produced in the output matrix; 'Time', which gives the time, 'Censored', which gives the censoring indicator (where 1 is patient was censored), 'Trt', which gives the treatment number, and 'Iter', which is the iteration number. 
+
+A simple example corresponding to the first example from the nph_traj section is given here:
+
+```{r}
+# Simple simulation corresponding to first example of nph_traj
+# Number of iterations kept unrealistically low to reduce processing time
+simulation1 <- simulate_trials(active_ecurve=activeCurve,control_ecurve=controlCurve,rcurve=rcurve3,assess=10,iterations=100,seed=1234)
+
+```
+
+Using the same syntax as nph_traj, you can also specify censoring distributions that control dropout by providing Curve objects to the two dcurve arguments.
+
+Also similar to nph_traj, more detailed output can be requested ('detailed_output=TRUE'), which includes the times for events and censorings that were not observed because something else happened first. For most purposes this extra detail is not required, but it can be useful for checking distributions and it is required if you later want to change the time of assessment (or fixed event number). Functions to change assessment times will be covered in section 4.2.
+
+Two formats of simulated data are supported by gestate; matrix and list format. In the default matrix format, all simulated data is present in a single table. In list format, each iteration is separated into its own table within a list and the Iter column is omitted. The 'output_type' argument controls which is produced. Both formats are automatically supported by analyse_sim.
+
+When performing large simulations in R, all data is held within RAM. Efforts has been taken to reduce the RAM usage of gestate's simulations, but large simulations (>10,000) will still require a large quantity of available system memory; exceeding this typically leads to excessive slowdowns and eventually system crashes. Considerable RAM savings can be made by using the list format and not using detailed output, so these are recommended for large 'production' simulations; together these options save about 2/3rds of the RAM footprint compared to detailed output in matrix format.
+
+A more complicated example showing the additional options and based on the second and third examples from the nph_traj section is presented here:
+
+```{r}
+# Simple simulation corresponding to first example of nph_traj
+# Number of iterations kept unrealistically low to reduce processing time
+simulation2 <- simulate_trials(active_ecurve=activeCurveNPH,control_ecurve=controlCurveNPH,active_dcurve=censorCurveA,control_dcurve=censorCurveC,rcurve=rcurve3,fix_events=100,iterations=100,seed=12345,detailed_output = TRUE,output_type = "list")
+
+```
+
+### 4.2 Simulating Stratified Data: simulate_trials_strata
+
+Sometimes it is believed that there are important covariates in a trial or that there is heterogeneity of treatment effect between different patient strata. simulate_trials_strata is available to simulate this. 
+
+simulate_trials_strata acts as a wrapper for simulate_trials; consequently syntax is almost identical, with two main exceptions:
+
+Firstly there are two additional arguments; 'stratum_probs' and 'stratum_name'. The first is a required vector summing to 1 that contains the probability of a patient belonging to each stratum, with entries corresponding to each stratum required. If 'stratum_probs' does not sum to 1, an error will be produced. The second is optional and gives the name of the column with the stratum variable in. 
+
+The other main syntax difference is that each of the four arguments requiring Curve objects instead now instead takes a list of Curve objects. If a single Curve is supplied to a given argument, it will be shared across all strata (this is commonly done for the censoring arguments). Otherwise, the list should be of the same length as the 'stratum_probs'. In this case, the Curve objects provide the distributions for events or censorings within their arm for their respective strata only.
+
+A simple example is as follows:
+
+```{r}
+# Define a Curve list for the active arm but keep just a single value for the control arm, to represent a predictive covariate.
+activeCurveStrata <- c(activeCurve, Weibull(alpha=100,beta=0.8))
+
+simulation3 <- simulate_trials_strata(stratum_probs=c(0.5,0.5),active_ecurve=activeCurveStrata,control_ecurve=controlCurve,rcurve=rcurve3, assess=10,iterations=100,seed=1234)
+
+```
+
+
+### 4.3 Modifying Simulated Data: set_event_number and set_assess_time
+
+Once simulations are complete, they may be analysed straight away. However sometimes it is desirable to first modify the data. gestate V1.3.x has two functions available to do this; 'set_event_number' and 'set_assess_time'. These can be used to modify the assessment times to respectively either a fixed event number or a given assessment time. Both are usable on simulations previously using either approach, so long as detailed output is available. By keeping the data's existing assessment criteria, it is also possible to just use these functions to change the format of the data from matrix to list, or vice versa. 
+
+There is one caveat; Patients that have not yet entered the trial at the time of assessment are always excluded from the data set. If the current assessment time for an iteration is before the maximum recruitment time, then any increases in assessment time will lead to errors caused by these missing patients. This is straightforward to check if the original data has a fixed assessment time, but can be awkward if a fixed event number was specified as the assessment time will vary between iterations. It is recommended therefore to only apply it to fixed event simulations if either the pre-existing number of events is sufficiently large that no iteration is still in the recruitment period, or if the number of events is being reduced (rather than a fixed time being set).
+
+Using either function is straightforward; provide the name of the simulated data set as an argument to the relevant function, then the new time / event number. By default the output format will be the same as that entered, and detailed output will remain. Both of these may be changed by the same arguments discussed in the previous section.
+
+Two examples:
+
+```{r}
+# Increase the number of events for simulation 2
+simulation2a <- set_event_number(data=simulation2,events=120)
+
+#Rerun simulation 1 with detailed output specified
+simulation1a <- simulate_trials(active_ecurve=activeCurve,control_ecurve=controlCurve,rcurve=rcurve3,assess=10,iterations=100,seed=1234,detailed_output=TRUE)
+# Retain the assessment time for simulation 1 at 10, but convert to a list format with simple output
+simulation1b <- set_assess_time(data=simulation1a,time=10,output_type="list",detailed_output = FALSE)
+
+```
+
+### 4.4 Analysing Simulated Data: analyse_sim
+
+analyse_sim can be used to analyse data simulated by gestate. It is designed to automatically detect the input formats and provide minimal-fuss analysis. To perform a log-rank test and Cox regression is thus simply:
+
+```{r}
+# Perform log-rank test and Cox regression on simulated data
+analysis1 <- analyse_sim(simulation1)
+head(analysis1)
+
+```
+
+analyse_sim produces a matrix with each row containing the results of one iteration. For Cox regression, output is produced for the HR and log-HR as well as its standard error, Z score and p-value. For the log-rank test the Z score and p-value are returned. The number of events in each arm is also produced, 
+
+Stratified analysis for a single variable (covariate adjustment for Cox) is also supported by using the 'stratum' argument to provide the column name of the stratification variable:
+
+```{r}
+# Perform stratified log-rank test and covariate-adjusted Cox regression on simulated data
+analysis3 <- analyse_sim(data=simulation3, stratum="Stratum")
+head(analysis3)
+
+```
+
+Landmark and RMST analysis may also be requested by specifying the landmark and restriction times respectively to the 'landmark' and 'RMST' arguments, (the same syntax as nph_traj). RMST analysis is performed using the survrm2 package, while landmark analysis uses the Greenwood standard error approach. 
+
+To speed up analysis, gestate supports parallel processing through the doParallel package. If this is installed then the 'parallel_cores' argument may be set to the required number of cores.
+
+A final example is:
+
+```{r}
+# Perform log-rank test, Cox regression, landmark analysis and RMST analysis on simulated data using parallel processing.
+analysis2 <- analyse_sim(data=simulation2, RMST=10, landmark=10, parallel_cores=2)
+head(analysis2)
+
+```
+
+For both landmark and RMST analyses, estimates are returned for each arm and the difference between them. Standard errors for all three quantities are produced, along with the Z score and p-value.
+
+### 4.5 Summarising Analysed Data: summarise_analysis
+
+summarise_analysis is a function to summarise the results from multiple simulation iterations. It reads in the output from analyse_sim and automatically detects which analyses have been performed, adjusting its output as necessary. Apart from the name of the input analysis data, the only parameter is 'alpha1', which corresponds to the one-sided alpha level for power calculations. By default this is 0.025 (i.e. 2.5% 1-sided alpha)
+
+An example call is:
+
+```{r}
+# Summarise analysis from analysis2 output
+summarise_analysis(analysis2)
+
+```
+
+The output table contains a summary across all iterations of the simulation, with overall values and power. For Cox regression, the HR and logHR and SE of the logHR are produced, along with the average Z score, p-value and power. For the log-rank test, the average Z score, p value and power are returned. Failure rates (probability of analysis failure) for each are also given. If RMST and/or landmark analysis were previously requested, average values and SEs are given for each arm and the difference between arms. The powers and probabilities of analysis failure are also given.
+
+### 4.6 Comparisons of Simulated Data to Analytic Outputs
+
+Simulation may be used to validate analytic results; A simple workflow to compare outputs from nph_traj and summarise_analysis might look like the following:
+
+```{r}
+# Run analytic planning and select a suitable time
+outputX <- nph_traj(active_ecurve=activeCurveNPH, control_ecurve=controlCurveNPH, rcurve=rcurve3, max_assessment=50, RMST=40, landmark=40)
+outputX$Summary[41:50,]
+```
+
+We select 47 months as it gives 90% power for LR/Cox and specify 2000 simulations (this is due to technical limitations in vignette creation; typically 10,000+ are recommended):
+```{r}
+# Run simulation, analysis, summary at chosen time
+simulationX <- simulate_trials(active_ecurve=activeCurveNPH, control_ecurve=controlCurveNPH, rcurve=rcurve3, assess=47, seed=123456, iterations = 2000, output_type="list")
+analysisX   <- analyse_sim(simulationX,RMST=40,landmark=40)
+summaryX    <- summarise_analysis(analysisX)
+
+```
+
+We can now pair results up and directly compare them between methods:
+
+```{r}
+# Run simulation, analysis, summary at chosen time
+A <- outputX$Summary[47,]
+B <- summaryX
+Events_Active <- c(A$Events_Active,B$Events_Active)
+Events_Control <- c(A$Events_Control,B$Events_Control)
+Events_Total <- c(A$Events_Total,B$Events_Total)
+HR <- c(A$HR,B$HR)
+LogHR <- c(A$LogHR,B$LogHR)
+LogHR_SE <- c(A$LogHR_SE,B$LogHR_SE)
+LR_Power <- c(A$Schoenfeld_Power,B$Power_LR)
+RMST <-c(A$RMST_Delta,B$RMST_Delta)
+RMST_SE <-c(A$RMST_SE,B$RMST_D_SE)
+RMST_Power <- c(A$RMST_Power,B$RMST_Power)
+Landmark <- c(A$LM_Delta,B$LM_Delta)
+Landmark_SE <- c(A$LM_D_SE,B$LM_D_SE)
+Landmark_Power <- c(A$LM_Power,B$LM_Power)
+collated <- rbind(Events_Active,Events_Control,Events_Total,HR,LogHR,LogHR_SE,LR_Power,RMST, RMST_SE, RMST_Power, Landmark,Landmark_SE,Landmark_Power)
+colnames(collated) <- c("Analytic","Simulated")
+
+# Display comparison table
+collated
+```
+
+As expected, all properties align closely. For testing whether the two values differ by more than would be expected by random, Monte Carlo errors should be calculated for each simulated quantity; in general this is also good practice for analysis and reporting of simulation results.
+
+## 5 References
+1 Bell, J. (2019) Power Calculations for Time-to-Event Trials Using Predicted Event Proportions. Manuscript submitted for publication.
+
+2 Pike, M.C. (1972). Contribution to the Discussion on the Paper "Asymptotically efficient rank invariant test procedures" by R. Peto and J. Peto. Journal of
+the Royal Statistical Society Series A; 135(2): 201-203.
+
+3	Schoenfeld, D. (1981) The asymptotic properties of nonparametric tests for comparing survival distributions. Biometrika; 68: 316-319.
+
+4	Schoenfeld, D.A. (1983) Sample-size formula for the proportional-hazards regression model. Biometrics; 39(2): 499-503.
+
+
+
