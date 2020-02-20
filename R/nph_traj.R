@@ -1,16 +1,20 @@
 if(getRversion() >= "2.15.1")  utils::globalVariables(c("Dfunction_control","Dfunction_active","Nfunction_control","Sfunction_control","Sfunction_active","Nfunction_active","N_Control","N_Active","E_Events_Active","E_Events_Control","HR_CI_Upper","HR_CI_Lower","Peto_LogHR","Expected_Z","Expected_P","Log_Rank_Stat","Variance","V_Pike_Peto","Event_Ratio","Event_Prop_Power","Z_Power"))
 
-#'Calculate analytic time-to-event trial properties under non-proportional hazards or other complex assumptions
+#'Calculate analytic time-to-event trial properties under non-proportional hazards and complex assumptions
 #'
-#' This function calculates the expected parameters/outputs/properties for a 2-arm Time-To-Event trial under complex assumptions.\cr
+#' This function calculates the expected parameters/outputs/properties for a two-arm Time-To-Event trial under complex assumptions.
 #' It is designed to work with non-proportional hazards and ought to be able to accommodate any distributional assumptions for
 #' events, censoring and recruitment, so long as they are correctly detailed in Curve or RCurve objects.\cr
-#' It performs power calculation and hence sample size planning. However, identifying the optimum assessment time is also key.\cr
-#' It uses numerical integration across event, censoring and recruitment functions to calculate expected observed and expected expected event numbers.\cr
-#' From these, it estimates an expected HR using the Pike method, with the same interpretation as that found using Cox regression.\cr
-#' The expected event numbers and HR can then be used in calculating power by one of several methods, including the Schoenfeld and Frontier methods.\cr
+#' The function performs power calculations and hence can be used for sample size planning. By creating trajectories of properties
+#' over time, the function also assists with identifying the optimum assessment time.\cr
+#' The function uses numerical integration across event, censoring and recruitment functions to estimate observed and expected event numbers.
+#' From these, it estimates an expected HR, with the same interpretation as that found using Cox regression, using the Pike method.
+#' The estimated event numbers and HR can be used to calculate power by one of several methods, including the Schoenfeld and Frontier methods.
 #' A separate, direct, power calculation can also be performed using the log-rank test formula and its Z-distribution.\cr
-#' To assist sample size finding, it will also estimate the required sample size to reach a given power keeping all variables other than recruitment.\cr
+#' To assist sample size finding, the function will also optionally estimate the required sample size to reach a given power 
+#' keeping all variables other than recruitment.\cr
+#' Expected RMST and landmark analysis properties may also be calculated. This also uses numerical integration techniques. 
+#' Power is also then estimated for such analyses.\cr
 #' @param active_ecurve Event distribution for the active arm, specified as a Curve object
 #' @param control_ecurve Event distribution for the control arm, specified as a Curve object
 #' @param active_dcurve Dropout/censoring distribution for the active arm, specified as a Curve object. By default, a Blank() object, i.e. no dropout.

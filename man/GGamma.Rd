@@ -22,8 +22,8 @@ See Details for information on parameterisation.
 The Generalised Gamma distribution has parameterisation:\cr
 f(x) = (rho x^((rho eta)-1) e^(-(x/theta)^rho) theta^(-rho eta) )/Gamma(eta)\cr
 F(x) = LPGamma(eta,(x/theta)^rho)/Gamma(eta)\cr
-where Gamma is the gamma function, and LPGamma is the lower partial gamma function\cr
-Please note that there is a restriction when simulating that eta must be greater than 1. No such restriction applies for analytical calculations.\cr
+where Gamma is the gamma function, and LPGamma is the lower partial gamma function.\cr
+As of v1.4.0, all values of eta are now fully supported.\cr
 }
 \examples{
 GGamma(theta=20,eta=2,rho=0.7)

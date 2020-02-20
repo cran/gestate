@@ -14,15 +14,17 @@
 #' @slot PDF Name of the PDF function describing the Curve.
 #' @slot CDF Name of the CDF function describing the Curve.
 #' @slot RF Name of the random generator function describing the Curve.
+#' @slot inverse Name of the inverse CDF function describing the Curve. Optional; set to NULL if unavailable.
 #' @slot paramno Number of parameters required to define the distribution.
 #' @slot pnames Names of parameters defining the distribution. Should be a vector of length paramno.
 #' @slot pvalue Values of parameters defining the distribution. Should be a list of length paramno.
 #' @author James Bell
-#' @examples new("Curve", type="ExampleCurve",PDF="name_of_pdf_function",CDF="name_of_CDF_function",
-#' RF="name_of_random_draw_function", paramno=2,pnames=c('param1','param2'),pvalue=list(1,2))
+#' @examples new("Curve", type="ExampleCurve",PDF="pdf_fn_name",CDF="CDF_fn_name",
+#'   RF="random_draw_fn_name", inverse="inv_fn_name",paramno=2,pnames=c('param1','param2'),
+#'   pvalue=list(1,2))
 #' @export
 setClass("Curve",
-         slots = list(type="character", PDF = "character", CDF = "character", RF = "character", paramno = "numeric",
+         slots = list(type="character", PDF = "character", CDF = "character", RF = "character", inverse="character",paramno = "numeric",
                       pnames="character",pvalue="list"))
 
 #'RCurve Class for defining recruitment distributions
@@ -34,12 +36,14 @@ setClass("Curve",
 #' @slot Ratio Randomisation ratio. Nactive divided by Ncontrol = Ratio.
 #' @slot Length Total length of the recruitment period.
 #' @slot RF Name of the random generator function describing the Curve.
+#' @slot inverse Name of the inverse CDF function describing the Curve. Optional; set to NULL if unavailable.
 #' @slot paramno Number of parameters required to define the distribution.
 #' @slot pnames Names of parameters defining the distribution. Should be a vector of length paramno.
 #' @slot pnames Values of parameters defining the distribution. Should be a list of length paramno.
 #' @author James Bell
-#' @examples new("RCurve", type="ExampleCurve",PDF="name_of_pdf_function", CDF="name_of_CDF_function",
-#' RF="name_of_random_draw_function", paramno=2, pnames=c('param1','param2'),pvalue=list(1,2), 
+#' @examples new("RCurve", type="ExampleCurve",PDF="pdf_fn_name", CDF="CDF_fn_name",
+#'   RF="random_draw_fn_name", inverse="inv_fn_name", paramno=2, pnames=c('param1','param2'),
+#'   pvalue=list(1,2), 
 #' N=100,Nactive=50,Ncontrol=40, Ratio=50/40, Length = 5)
 #' @export
 setClass("RCurve",
@@ -160,9 +164,9 @@ setMethod(f="getRFfunction", signature="Curve",definition=function(theObject,n="
 })
 
 ######################################################################################################
-#'Method for running the RF function for a Curve object
+#'Method for creating a random draw function from a Curve object
 #'
-#' This retrieves and runs the full RF function of the Curve object as a string
+#' This creates a random draw function from the Curve object
 #' @param theObject The name of the Curve Object
 #' @param ... Pass-through arguments
 #' @examples createRFfunction(Weibull(100,1))
@@ -171,9 +175,9 @@ setGeneric(name="createRFfunction", def=function(theObject,...) {
   standardGeneric("createRFfunction")
 })
 
-#'Method for running the RF function for a Curve object
+#'Method for creating a random draw function from a Curve object
 #'
-#' This retrieves and runs the full RF function of the Curve object as a string
+#' This creates a random draw function from the Curve object
 #' @param theObject The name of the Curve Object
 #' @param n The parameter name for the number of random draws to make. Default=n
 #' @examples createRFfunction(Weibull(100,1))
@@ -181,6 +185,83 @@ setGeneric(name="createRFfunction", def=function(theObject,...) {
 setMethod(f="createRFfunction", signature="Curve",definition=function(theObject,n="n"){
   return(  eval(parse(text=paste("function(",n,"){",getRFfunction(theObject,n="n"),"}")))  )
 })
+
+######################################################################################################
+#'Method for taking random draws from a Curve object distribution
+#'
+#' This takes random draws from the Curve object distribution
+#' Note that the seed should always be appropriately set before invoking this
+#' @param theObject The name of the Curve Object
+#' @param ... Pass-through arguments
+#' @examples random_draw(Weibull(100,1),1000)
+#' @export
+setGeneric(name="random_draw", def=function(theObject,...) {
+  standardGeneric("random_draw")
+})
+
+#'Method for taking random draws from a Curve object distribution
+#'
+#' This takes random draws from the Curve object distribution
+#' Note that the seed should always be appropriately set before invoking this
+#' @param theObject The name of the Curve Object
+#' @param n Number of random draws required
+#' @examples random_draw(Weibull(100,1),1000)
+#' @export
+setMethod(f="random_draw", signature="Curve",definition=function(theObject,n){
+  x <- createRFfunction(theObject)
+  return(x(n))
+})
+
+######################################################################################################
+#'Method for returning the inverse-CDF function for a Curve object
+#'
+#' This retrieves the full inverse-CDF function of the Curve object as a string
+#' @param theObject The name of the Curve Object
+#' @param ... Pass-through arguments
+#' @examples getInvfunction(Weibull(100,1))
+#' @export
+setGeneric(name="getInvfunction", def=function(theObject,...) {
+  standardGeneric("getInvfunction")
+})
+#'Method for returning the inverse-CDF function for a Curve object
+#'
+#' This retrieves the inverse CDF function of the specified Curve object as a string
+#' @param theObject The name of the Curve Object
+#' @param p The probability parameter name to use in the CDF function. Default=p
+#' @examples getCDFfunction(Weibull(100,1))
+#' @export
+setMethod(f="getInvfunction", signature="Curve",definition=function(theObject,p="p"){
+  INV <- paste(theObject@inverse,"(p=",p)
+  for(i in 1:theObject@paramno){
+    INV <- paste(INV,",",theObject@pnames[i],"=",theObject@pvalue[i])
+  }
+  INV <- paste(INV,")")
+  return(INV)
+})
+
+######################################################################################################
+#'Method for evaluating the inverse-CDF function for a Curve object at p
+#'
+#' This numerically evaluates the inverse-CDF function of the Curve object at the specified p
+#' @param theObject The name of the Curve Object
+#' @param ... Pass-through arguments
+#' @examples evaluateInvfunction(Weibull(100,1), 0.5)
+#' @export
+setGeneric(name="evaluateInvfunction", def=function(theObject,...) {
+  standardGeneric("evaluateInvfunction")
+})
+#'Method for evaluating the inverse-CDF function for a Curve object at p
+#'
+#' This numerically evaluates the inverse-CDF function of the Curve object at the specified p
+#' @param theObject The name of the Curve Object
+#' @param p The probability to evaluate the time at
+#' @examples evaluateInvfunction(Weibull(100,1), 0.5)
+#' @export
+setMethod(f="evaluateInvfunction", signature="Curve",definition=function(theObject,p){
+  return( eval(parse(text=getInvfunction(theObject)))  )
+})
+
+
 
 #######################################################################################################
 #'Method for returning the CDF function for a RCurve object

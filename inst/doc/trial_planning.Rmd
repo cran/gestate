@@ -19,20 +19,22 @@ knitr::opts_chunk$set(
 ## 1 Introduction
 
 ### 1.1 Vignette Overview
-The gestate package is designed to assist accurate planning and event prediction for time-to-event clinical trials. In this vignette, we introduce the gestate package, and demonstrate how it may be used in trial planning. A separate vignette covers event prediction of ongoing trials. The first section will show how distributions are easily described and stored as Curve and RCurve objects. The second section will demonstrate analytic methods for trial planning, and the third section will show how simulate may be alternatively used. 
+The gestate package is designed to assist accurate planning and event prediction for time-to-event clinical trials. In this vignette, we introduce the gestate package, and demonstrate how it may be used in trial planning. A separate vignette ("event_prediction") covers event prediction of ongoing trials. The first section will show how distributions are easily described and stored as Curve and RCurve objects. The second section will demonstrate analytic methods for trial planning, and the third section will show how simulate may be alternatively used. 
 
 ### 1.2 Exponential Distributions 
-The least possible information required to calculate a time-to-event trial's predicted properties are distributions of events in each arm and an expected distribution of patient recruitment, including the numbers in each arm. However typically event distributions are over-simplified by implicitly assuming exponential distributions and then defining them by a single number (often the median). This shortcut is not available in gestate Since events in many clinical trials do not follow exponential distributions and assuming this without evidence can lead to wildly inaccurate trial planning. Even where no historical information is available and an exponential distribution can be considered to be the best guess, it is important to be clear that there is an assumption being made that the distribution is exponential. Gestate therefore requires explicit selection of distribution types, as well as their parameters, and does not default to exponential.
+The least possible information required to calculate a time-to-event trial's predicted properties are distributions of events in each arm and an expected distribution of patient recruitment, including the number per arm. However, typically event distributions are over-simplified by implicitly assuming exponential distributions and then defining them by a single number (often the median). This shortcut is not available in gestate since events in many clinical trials do not follow exponential distributions and assuming this without evidence can lead to inaccurate trial planning. Even where no historical information is available and an exponential distribution can be considered to be the best guess, it is important to be clear that a choice has been made in setting a distribution to exponential. Gestate therefore requires explicit selection of distribution types, as well as their parameters, and does not default to exponential.
 
 ### 1.3 Non-Proportional Hazards and Complex Censoring
-Aside from simplicity, one of the historical reasons for use of the exponential distribution was a requirement for proportional hazards in many analysis methods, although this should not have prevented use of Weibull distributions. With the rising importance of non-proportional hazards in clinical trials, it is important that trial planning methods can handle both the expected patterns of events and also analytical approaches that are more suited to this situation. To date, this has mainly been done by simulation, with the standard drawbacks of having to account for Monte Carlo error and being relatively slow. Gestate's numerical integration methods and Curve architecture for handling distributions are designed to handle unusual event distributions as well as complex censoring patterns, and to produce calculations for a range of analytical methods. These approaches are extremely fast in comparison to simulation, and generally quite accurate. Simulation tools have also been provided to assist in validating output, but it is intended that the user arrives at their preferred sample size and then validates it by simulation - this workflow is designed to produce a considerable time-saving.
+Aside from simplicity, one of the historical reasons for use of the exponential distribution was a requirement for proportional hazards in many analysis methods, although this should not have prevented use of Weibull distributions. With the rising importance of non-proportional hazards in clinical trials, it is important that trial planning methods can handle both the expected patterns of events and also analytical approaches that are more suited to this situation. To date, this has mainly been done by simulation, with the standard drawbacks of having to account for Monte Carlo error and being relatively slow. Gestate's numerical integration methods and Curve architecture for handling distributions are designed to handle unusual event distributions as well as complex censoring patterns, and to produce calculations for a range of analytical methods. These approaches are fast in comparison to simulation, and generally quite accurate. Simulation tools have also been provided to assist in validating output, but it is intended that the user arrives at their preferred sample size and then validates it by simulation - this workflow is designed to produce a considerable time-saving.
 
 ### 1.4 Power Calculation vs Sample Size Calculation
-The gestate package is designed around power calculation rather than sample size calculation. While the reasoning behind this is obvious in the case of the simulation aspect, here is a brief explanation for this with the analytic approach. 
+The gestate package is designed around calculating power from a given sample size rather than sample size from power. While this is clearly necessary for simulation, the analytic approach also does this for the following reasons. 
 
-First, it should be noted that changing the sample size more than trivially without changing the length or shape of recruitment is logistically difficult. The length and shape of recruitment are also important for calculating the number of events at any given time. So any 'sample size optimisation' approach must either make the probably unrealistic assumption that the rate of recruitment can be scaled freely, or it must have an algorithm for changing other recruitment parameters. As trial logistics vary widely, it is unlikely that a sensible general-purpose algorithm would be possible, and even if it were, it would complicate optimisation of sample size. Therefore, although gestate does provide an option to estimate a sample size that would produce a given power at each time point, it does so based on the unrealistic free recruitment-rate scaling assumption, and it is best used as an indication of the scenario to next calculate power for.
+First, it allows power of a trial to be assessed over time. This is important as there are usually questions around the trade-off between trial duration and sample size. Even where it is reasonable to reversibly relate event numbers to power, the most pertinent questions then relate to how many patients are required to produce those events and how long it will take.
 
-A further complicating factor for direct sample size calculation is that the correspondance between event numbers and power is not absolute, even for log-rank tests. Particularly when randomisation ratios are not 1:1, it can be shown that the 'maturity' of the data (and in particular the ratio of events between arms) affects the number of events required for a given power. This is highlighted by the inclusion of the Frontier Power method for power calculation that is included in the package and which is a generalisation of the Schoenfeld formula to handle unequal randomisation ratios appropriately. Since data maturity affects power, simply scaling the sample size to achieve the desired number of events may not give you the required power^1^.
+Secondly, moderate-to-large changes of sample size usually require changing the length or shape of recruitment, rather than simply scaling the rate. However, the length and shape of recruitment are also important for calculating the number of events at any given time. Methods that calculate sample size from power generally assume that the rate of recruitment can be scaled freely; the alternative of specifying an algorithm to change other recruitment parameters as patient numbers increase cannot be done generally as trial logistics vary widely. To speed sample size identification up, gestate provides an option to estimate a sample size that would produce a specified power at each time point, using the simplified rate scaling assumption. This provides an indication of patient numbers for the next scenario to calculate power for, but allows the user opportunity to change other recruitment parameters appropriately. 
+
+A final complicating factor for direct sample size calculation is that the correspondence between event numbers and power is not absolute, even for log-rank tests. Particularly when randomisation ratios are not 1:1, it can be shown that the 'maturity' of the data (and in particular the ratio of events between arms) affects the number of events required for a given power. This is highlighted by the inclusion of the Frontier Power method for power calculation that is included in the package,which is a generalisation of the Schoenfeld formula to handle unequal randomisation ratios appropriately. Since data maturity affects power, even simply scaling the sample size to achieve the desired number of events may not actually give the required power^1^.
 
 ### 1.5 Shiny App
 The gestate package contains a built-in Shiny App to implement most of the functionality covered in this vignette. 
@@ -52,7 +54,7 @@ Curve objects serve three main purposes; they allow the gestate code to be indep
 
 So long as a distribution is supported, a user may create a Curve object by using a (constructor) function corresponding to the distribution of interest, providing its parameters as arguments. 
 
-gestate V1.3.x comes with the following distributions supported as Curve objects:
+gestate V1.4.x comes with the following distributions supported as Curve objects:
 
 | Distribution | Function    | Parameter Arguments | S(t) |
 |:-------------|:------------|:--------------------|:------|
@@ -83,13 +85,16 @@ Where you want to make an event / censoring impossible, you can use define a nul
 
 Recruitment-associated distributions use a special form of Curve object; the RCurve. This differs in several ways. Firstly, it also includes details of patient numbers for two arms; an active arm and a control arm. Secondly, it stores the distribution of patient recruitment, rather than a censoring distribution. This is because the 'censoring distribution' can only be defined in conjunction with an assessment time.
 
-gestate V1.3.x comes with the following recruitment distributions supported as RCurve objects:
+gestate V1.4.x comes with the following recruitment distributions supported as RCurve objects:
 
 | Distribution | Function | Parameter Arguments | Notes                 |
 |:-------------|:---------|:--------------------|:----------------------|
 | Linear       | LinearR  | rlength, Nactive, Ncontrol | Standard linear recruitment |
 | Instant      | InstantR | Nactive, Ncontrol  | All patients in trial for same duration |
-| Piecewise-linear   | PieceR | recruitment, ratio | Recruitment is two-column matrix of durations and rates|
+| Piecewise-linear   | PieceR | recruitment, ratio | Recruitment is two-column matrix of durations and rates |
+|Piecewise-linear, fixed follow-up | PieceRMaxF | recruitment, ratio, maxF |Piecewise recruitment with patients followed for fixed duration |
+
+For most event-driven TTE trials, LinearR or PieceR distributions are appropriate. For trials where patients are instead followed for a fixed duration (e.g. 12 months per patient), the InstantR distribution is typically sufficient, since the trial typically finishes once all patients have been followed for the required time. However, in cases where the end of trial is both event driven and has fixed duration patient follow-up, the PieceRMaxF distribution accounts for this additional complexity.
 
 ```{r}
 # Define a linear recruitment over 12 months with 100 patients in each arm:
@@ -108,7 +113,7 @@ rcurve2
 
 ## 3 Analytic Planning of Time-to-Event Trials: nph_traj 
 
-Common questions in planning time to event trials include what the expected number of events, survival function, power or width of HR confidence interval will be at any given time. In non-proportion hazards situations, the expected hazard ratio or difference in RMST at a given time (including power to test them) may also be of interest. nph_traj is designed to analytically answer these questions and to do so in real-time.
+Common questions in planning time to event trials include what the expected number of events, survival function, power or width of hazard ratio (HR) confidence interval will be at any given time. In non-proportion hazards situations, the expected HR, difference in Survival functions (referred to as landmark analysis) or difference in restricted mean survival time (RMST) at a given assessment time (including power to test them) may also be of interest. nph_traj is designed to analytically answer these questions and to do so in real-time.
 
 nph_traj uses numerical integration techniques to calculate expected event numbers in each arm at each time point and from these derives predicted properties for the log-rank test and Cox regression using an approach based upon the Pike approximation for the HR^2^. Separate numerical integration approaches are also used to predict standard errors for RMST and landmark analysis in the presence of censoring and hence calculate power for these analyses.
 
@@ -118,7 +123,7 @@ nph_traj makes no explicit assumptions about the unit of time, only that all inp
 
 ### 3.1 Getting started: Simple Log-Rank and Hazard-Ratio Calculations
 
-At a minimum, nph_traj requires a Curve object to describe the distribution of each of the active and control arms ('active_ecurve' and 'control_ecurve' arguments respectively), as well as an RCurve object ('rcurve' argument) to describe the recruitment distribution. For more information on Curve and RCurve objects, see section 2. The distributions of the active and control arms should typically be estimated based upon parameters or curve-fitting from previous trials (using e.g. fit_KM or fit_KM_tte_data from the gestate package; see the event_prediction vignette).
+At a minimum, nph_traj requires a Curve object to describe the distribution of each of the active and control arms ('active_ecurve' and 'control_ecurve' arguments respectively), as well as an RCurve object ('rcurve' argument) to describe the recruitment distribution. For more information on Curve and RCurve objects, see section 2. The distributions of the active and control arms should typically be estimated based upon parameters or curve-fitting from previous trials (using e.g. fit_KM or fit_tte_data from the gestate package; see the event_prediction vignette).
 
 Example call:
 ```{r}
@@ -148,7 +153,7 @@ Each row corresponds to a separate time point, given by the first column;'Time'.
 
 Administrative censoring is handled implicitly based upon the specified RCurve object. However, dropout censoring is also common in time-to-event trials. This can be specified through Curve objects, and separate censoring distributions are supported for each arm. By default, gestate uses no censoring via the Blank() Curve.
 
-It should be noted that the required censoring distributions must represent that of the censoring that would occur in the absence of events or administrative censoring. The observed numbers of censored patients in each arm will therefore also depend partially on the event distributions. The suggested way to use existing data to parameterise the censoring distributions is to create 'reverse Kaplan Meier' plots of existing data, whereby dropout censorings are 'events', and both events and administrative censorings are 'censorings'. Curve-fitting techniques (e.g. fit_KM or fit_KM_tte_data from gestate, see event_prediction vignette) may then be used to estimate the parametric distributions.
+It should be noted that the required censoring distributions must represent that of the censoring that would occur in the absence of events or administrative censoring. The observed numbers of censored patients in each arm will therefore also depend partially on the event distributions. The suggested way to use existing data to parameterise the censoring distributions is to create 'reverse Kaplan Meier' plots of existing data, whereby dropout censorings are 'events', and both events and administrative censorings are 'censorings'. Curve-fitting techniques (e.g. fit_KM or fit_tte_data from gestate, see event_prediction vignette) may then be used to estimate the parametric distributions.
 
 ### 3.4 Other/Advanced Options
 
@@ -235,7 +240,7 @@ Also similar to nph_traj, more detailed output can be requested ('detailed_outpu
 
 Two formats of simulated data are supported by gestate; matrix and list format. In the default matrix format, all simulated data is present in a single table. In list format, each iteration is separated into its own table within a list and the Iter column is omitted. The 'output_type' argument controls which is produced. Both formats are automatically supported by analyse_sim.
 
-When performing large simulations in R, all data is held within RAM. Efforts has been taken to reduce the RAM usage of gestate's simulations, but large simulations (>10,000) will still require a large quantity of available system memory; exceeding this typically leads to excessive slowdowns and eventually system crashes. Considerable RAM savings can be made by using the list format and not using detailed output, so these are recommended for large 'production' simulations; together these options save about 2/3rds of the RAM footprint compared to detailed output in matrix format.
+When performing large simulations in R, all data is simultaneously held within RAM. Efforts has been taken to reduce the RAM usage of gestate's simulations, but large simulations (>10,000) will still require a large quantity of available system memory; exceeding this leads to error messages about the inability to allocate sufficient RAM, excessive slowdown and/or system crashes. Considerable RAM savings can be made by shrinking the width of the simulation data sets by using the list format and not using detailed output, so these settings are recommended for large 'production' simulations; together these options save about 2/3rds of the RAM footprint compared to detailed output in matrix format.
 
 A more complicated example showing the additional options and based on the second and third examples from the nph_traj section is presented here:
 
@@ -269,7 +274,7 @@ simulation3 <- simulate_trials_strata(stratum_probs=c(0.5,0.5),active_ecurve=act
 
 ### 4.3 Modifying Simulated Data: set_event_number and set_assess_time
 
-Once simulations are complete, they may be analysed straight away. However sometimes it is desirable to first modify the data. gestate V1.3.x has two functions available to do this; 'set_event_number' and 'set_assess_time'. These can be used to modify the assessment times to respectively either a fixed event number or a given assessment time. Both are usable on simulations previously using either approach, so long as detailed output is available. By keeping the data's existing assessment criteria, it is also possible to just use these functions to change the format of the data from matrix to list, or vice versa. 
+Once simulations are complete, they may be analysed straight away. However sometimes it is desirable to first modify the data. gestate has two functions available to do this; 'set_event_number' and 'set_assess_time'. These can be used to modify the assessment times to respectively either a fixed event number or a given assessment time. Both are usable on simulations previously using either approach, so long as detailed output is available. By keeping the data's existing assessment criteria, it is also possible to just use these functions to change the format of the data from matrix to list, or vice versa. 
 
 There is one caveat; Patients that have not yet entered the trial at the time of assessment are always excluded from the data set. If the current assessment time for an iteration is before the maximum recruitment time, then any increases in assessment time will lead to errors caused by these missing patients. This is straightforward to check if the original data has a fixed assessment time, but can be awkward if a fixed event number was specified as the assessment time will vary between iterations. It is recommended therefore to only apply it to fixed event simulations if either the pre-existing number of events is sufficiently large that no iteration is still in the recruitment period, or if the number of events is being reduced (rather than a fixed time being set).
 
@@ -310,11 +315,13 @@ head(analysis3)
 
 ```
 
-Landmark and RMST analysis may also be requested by specifying the landmark and restriction times respectively to the 'landmark' and 'RMST' arguments, (the same syntax as nph_traj). RMST analysis is performed using the survrm2 package, while landmark analysis uses the Greenwood standard error approach. 
+Landmark and RMST analysis may also be requested by specifying the landmark and restriction times respectively to the 'landmark' and 'RMST' arguments, (the same syntax as nph_traj). RMST analysis follows the methods from Uno et al and Tian et al^5,6,7^, while landmark analysis uses the Greenwood standard error and normal approximation approach. 
 
-To speed up analysis, gestate supports parallel processing through the doParallel package. If this is installed then the 'parallel_cores' argument may be set to the required number of cores.
+For both landmark and RMST analyses, estimates are returned for each arm and the difference between them. Standard errors for all three quantities are produced, along with the Z score and p-value.
 
-A final example is:
+To speed up analysis, gestate supports parallel processing through the doParallel package. If this is installed then the 'parallel_cores' argument may be set to the required number of cores. Analysis code has also been optimised in V1.4.x to increase speed, with 4-fold improvement overall and at least 50-fold increase for covariate-adjusted RMST in comparison to v1.3.2. 
+
+A final analysis example is:
 
 ```{r}
 # Perform log-rank test, Cox regression, landmark analysis and RMST analysis on simulated data using parallel processing.
@@ -323,7 +330,7 @@ head(analysis2)
 
 ```
 
-For both landmark and RMST analyses, estimates are returned for each arm and the difference between them. Standard errors for all three quantities are produced, along with the Z score and p-value.
+
 
 ### 4.5 Summarising Analysed Data: summarise_analysis
 
@@ -387,14 +394,23 @@ collated
 As expected, all properties align closely. For testing whether the two values differ by more than would be expected by random, Monte Carlo errors should be calculated for each simulated quantity; in general this is also good practice for analysis and reporting of simulation results.
 
 ## 5 References
-1 Bell, J. (2019) Power Calculations for Time-to-Event Trials Using Predicted Event Proportions. Manuscript submitted for publication.
+1 Bell J (2019) Power Calculations for Time-to-Event Trials Using Predicted Event Proportions. Manuscript submitted for publication.
 
-2 Pike, M.C. (1972). Contribution to the Discussion on the Paper "Asymptotically efficient rank invariant test procedures" by R. Peto and J. Peto. Journal of
+2 Pike MC (1972). Contribution to the Discussion on the Paper "Asymptotically efficient rank invariant test procedures" by R. Peto and J. Peto. Journal of
 the Royal Statistical Society Series A; 135(2): 201-203.
 
-3	Schoenfeld, D. (1981) The asymptotic properties of nonparametric tests for comparing survival distributions. Biometrika; 68: 316-319.
+3	Schoenfeld D (1981) The asymptotic properties of nonparametric tests for comparing survival distributions. Biometrika; 68: 316-319.
 
-4	Schoenfeld, D.A. (1983) Sample-size formula for the proportional-hazards regression model. Biometrics; 39(2): 499-503.
+4	Schoenfeld DA (1983) Sample-size formula for the proportional-hazards regression model. Biometrics; 39(2): 499-503.
+
+5 Uno H, Tian L, Cronin A, Battioui C, Horiguchi M. (2017) survRM2: Comparing Restricted Mean Survival Time. R package version 1.0-2. https://CRAN.R-project.org/package=survRM2
+
+6 Uno H, Claggett B, Tian L, Inoue E, Gallo P, Miyata T, Schrag D, Takeuchi M, Uyama Y, Zhao L, Skali H, Solomon S, Jacobus S, Hughes M, Packer M, Wei LJ. (2014) Moving beyond the hazard ratio in quantifying the between-group difference in survival analysis. Journal of clinical Oncology; 32: 2380-2385.
+
+7 Tian L, Zhao L, Wei LJ. (2014) Predicting the restricted mean event time with the subject's baseline covariates in survival analysis. Biostatistics; 15: 222-233.
+
+
+
 
 
 

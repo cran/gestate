@@ -9,9 +9,9 @@ LinearR(rlength, Nactive, Ncontrol)
 \arguments{
 \item{rlength}{Length of recruitment.}
 
-\item{Nactive}{Number of patients recruited in active arm.}
+\item{Nactive}{Number of patients recruited in the active arm.}
 
-\item{Ncontrol}{Number of patients recruited in active arm.}
+\item{Ncontrol}{Number of patients recruited in the control arm.}
 }
 \description{
 This creates a RCurve object for a linear recruitment distribution.\cr

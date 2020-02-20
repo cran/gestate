@@ -2,7 +2,7 @@
 % Please edit documentation in R/s4_architecture.R
 \name{createRFfunction}
 \alias{createRFfunction}
-\title{Method for running the RF function for a Curve object}
+\title{Method for creating a random draw function from a Curve object}
 \usage{
 createRFfunction(theObject, ...)
 }
@@ -12,7 +12,7 @@ createRFfunction(theObject, ...)
 \item{...}{Pass-through arguments}
 }
 \description{
-This retrieves and runs the full RF function of the Curve object as a string
+This creates a random draw function from the Curve object
 }
 \examples{
 createRFfunction(Weibull(100,1))

@@ -4,12 +4,25 @@
 \alias{event_prediction}
 \title{Event prediction using patient-level survival data and a recruitment RCurve}
 \usage{
-event_prediction(data, Time = "Time", Event = "Event",
-  censoringOne = FALSE, type = c("automatic", "Weibull", "Lognormal"),
-  rcurve, max_time = 100, dcurve = Blank(), CI = 0.95,
-  condition = FALSE, cond_Events = 0, cond_NatRisk = NULL,
-  cond_Time = 0, units = c("Days", "Months"), init = NULL,
-  discountHR = 1)
+event_prediction(
+  data,
+  Time = "Time",
+  Event = "Event",
+  censoringOne = FALSE,
+  type = c("automatic", "Exponential", "Weibull", "Lognormal"),
+  rcurve,
+  max_time = 100,
+  dcurve = Blank(),
+  CI = NULL,
+  PI = 0.95,
+  condition = NULL,
+  cond_Events = NULL,
+  cond_NatRisk = NULL,
+  cond_Time = NULL,
+  units = c("Days", "Months"),
+  init = NULL,
+  discountHR = 1
+)
 }
 \arguments{
 \item{data}{The dataframe object containing the patient-level survival data}
@@ -21,7 +34,7 @@ event_prediction(data, Time = "Time", Event = "Event",
 \item{censoringOne}{Specify whether censoring is denoted in the Event column by a one (TRUE) or zero (FALSE). Default=FALSE (censorings denoted by 0, events by 1)}
 
 \item{type}{Type of event curve to fit. Default is "Automatic", fitting both Weibull and Log-normal curves.
-Alternatively accepts "Weibull" or "Lognormal" to force the type.}
+Alternatively accepts "Weibull", "Lognormal" or "Exponential" to force the type.}
 
 \item{rcurve}{Observed and/or expected recruitment distribution as an RCurve object. This should typically be of PieceR type (piecewise linear recruitment).}
 
@@ -29,17 +42,19 @@ Alternatively accepts "Weibull" or "Lognormal" to force the type.}
 
 \item{dcurve}{Dropout/censoring distribution as a Curve object. This is Blank() by default, i.e. no dropout.}
 
-\item{CI}{Number between 0 and 1 for the size of CI to calculate. Default is 0.95 (95 percent CI).}
+\item{CI}{DEPRECATED As of version 1.4.0 this argument has been renamed to 'PI'.}
 
-\item{condition}{Boolean whether to also do a conditional event prediction. Default=FALSE
-Note that If all conditioning options are left as defaults, conditioned calculation will equal the unconditional one.}
+\item{PI}{Number between 0 and 1 for the size of prediction interval to calculate. As of 1.4.0 this replaces the 'CI' argument. Default is 0.95 (95 percent prediction interval).}
 
-\item{cond_Events}{Number of events to condition on. Default=0. Optional unless condition=TRUE.}
+\item{condition}{DEPRECATED This argument has been removed as of version 1.4.0. Specifying a value for 'cond_Events' will now enable conditioned predictions.}
 
-\item{cond_NatRisk}{Number of patients at risk to condition on. Default=-1.
-By default, the program will estimate the number at risk assuming no censoring. It is highly recommended to specify this if conditioning. Optional unless condition=TRUE.}
+\item{cond_Events}{Number of observed events at the conditioning time to condition on. If NULL, no conditioned event prediction will be performed. Default=NULL (no conditioning).
+Note that if the discountHR option is used to predict adjusted event numbers, it would be possible to condition on either observed or adjusted events, but the observed number is required by this function.}
 
-\item{cond_Time}{Time, in months, to condition on. Default=0. Optional unless condition=TRUE.}
+\item{cond_NatRisk}{Number of patients at risk to condition on. Default=NULL.
+By default, the program will estimate the number at risk assuming no censoring. It is highly recommended to specify this if conditioning.}
+
+\item{cond_Time}{Time, in months, to condition on. A non-negative integer less than max_time is required if conditioning is requested, i.e. cond_Events is non-NULL. Not required otherwise.}
 
 \item{units}{Units that the KM-curve is specified in. Accepts "Days", "Months". Default="Days".}
 
@@ -47,24 +62,27 @@ By default, the program will estimate the number at risk assuming no censoring. 
 
 \item{discountHR}{Hazard ratio for discounting events e.g. used to predict adjudicated events from unadjudicated data where patients remain 'at risk' after an event is adjudicated not to have occurred.
 Values below 1 indicate fewer events will occur than predicted by the curve-fitting.
+When a discountHR is user-specified (i.e. not 1), conditioning event numbers need to be specified in terms of observed values, and not adjusted ones.
 Note that changing this argument is only allowed if type="Weibull" since log-normal curves are not compatible with proportional hazards.
-Default=1 (No discounting)}
+If patients become not at risk following a failed adjudication (i.e. removed from study), do not use this argument and instead adjust the output event numbers by the required factor.
+Default=1 (No discounting for adjudication)}
 }
 \value{
-Returns a list object with the fitted ecurve, the dcurve, the rcurve and a summary table with one row per month up to max_time containing the following columns:
+Returns a list object with the prediction ecurve (after adjustments for unit, discountHR), dcurve, rcurve, required PI, original fitted ecurve parameters (before adjustments)
+    and a summary table with one row per month up to max_time containing the following columns:
 \itemize{
  \item{"Assessment_Time"}{Time of assessment.}
  \item{"Patients"}{Number of patients recruited by the assessment time.}
  \item{"Predicted_Events"}{Number of events unconditionally predicted at the assessment time.}
  \item{"SE_Fitting"}{SE of the estimate of the fitted mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers.}
  \item{"SE_Prediction"}{SE of event prediction.}
- \item{"Prediction_Lower"}{Lower bound of X percent CI of unconditional event prediction, where X is the 'CI' argument. This CI is based on the quantiles of the beta-binomial distribution and hence is asymmetric about the predicted event number.}
- \item{"Prediction_Upper"}{Upper bound of X percent CI of unconditional event prediction, where X is the 'CI' argument. This CI is based on the quantiles of the beta-binomial distribution and hence is asymmetric about the predicted event number.}
- \item{"Conditioned_Events"}{Number of events unconditionally predicted at the assessment time (Column present only if conditioning specified).}
+ \item{"Prediction_Lower"}{Lower bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+ \item{"Prediction_Upper"}{Upper bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+ \item{"Conditioned_Events"}{Number of events conditionally predicted at the assessment time (Column present only if conditioning specified).}
  \item{"Cond_SE_Fitting"}{SE of the estimate of the fitted conditional mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers (Column present only if conditioning specified).}
  \item{"Cond_SE_Prediction"}{SE of the conditional event prediction (Column present only if conditioning specified).}
- \item{"Cond_Prediction_Lower"}{Lower bound of X percent CI of conditional event prediction, where X is the 'CI' argument. This CI is based on the quantiles of the beta-binomial distribution and hence is asymmetric about the predicted event number.}
- \item{"Cond_Prediction_Upper"}{Upper bound of X percent CI of conditional event prediction, where X is the 'CI' argument. This CI is based on the quantiles of the beta-binomial distribution and hence is asymmetric about the predicted event number.}
+ \item{"Cond_Prediction_Lower"}{Lower bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+ \item{"Cond_Prediction_Upper"}{Upper bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
 }
 }
 \description{
@@ -72,15 +90,16 @@ This is a function to perform event prediction\cr
 It uses the fit_KM_tte_data function to perform MLE regression of Weibull and log-normal curves to the provided survival data.\cr
 It creates an event Curve object from this, and combines it with a recruitment RCurve and an optional dropout(censoring) Curve.\cr
 Using the same numerical integration approach as nph_curve_trajectories it performs an unconditional event prediction.\cr
-If a conditioning time, event number (and preferably number at risk) are provided, a conditional event prediction is also calculated.\cr
+If a conditioning time and event number (preferably also a number at risk) are provided, a conditional event prediction is also calculated.\cr
 Analytic standard errors for conditional and unconditional event numbers are provided for the whole trajectory.\cr
 SEs calculated by propagating parameter estimate errors through the integrals by the delta method and then invoking a beta-binomial distribution.\cr\cr
 For event prediction, conditional predictions with the Conditional SE of Prediction are most accurate and appropriate.\cr
 Unconditional predictions should be close to conditional ones but technically relate to predictions if the trial were rerun, rather than this specific instance.
-Point estimates are usually very close to the unconditional ones, but the CIs are typically much wider than necessary.
+Point estimates are usually very close to the unconditional ones, but the prediction intervals are typically much wider than necessary.
 The conditional and unconditional SEs of fitting relate to the accuracy of the estimated mean event number at a given time, rather than the spread of future observations.
 The conditional and unconditional SEs of prediction relate to the accuracy of prediction of future observations, and should therefore be used for event prediction.
 Note that the Prediction SEs are wider than the Fitting SEs as they also take into account the binomial uncertainty of events occurring (beta-binomial model).
+As of version 1.4.0, the 'CI' argument has been renamed 'PI', and the 'condition' argument has been removed entirely (conditioning automatically occurs if cond_Event specified).
 }
 \examples{
 recruit <- PieceR(matrix(c(rep(1,12),10,15,25,30,45,60,55,50,65,60,55,30),ncol=2),1)
@@ -88,7 +107,7 @@ trial_short <- simulate_trials(active_ecurve=Weibull(50,0.8),control_ecurve=Weib
 rcurve=recruit, assess=10,iterations=1,seed=12345,detailed_output=TRUE)
 
 predictions <- event_prediction(data=trial_short, Event="Censored", censoringOne=TRUE, 
-type="Weibull", rcurve=recruit, max_time=60, condition=TRUE, cond_Events=49, cond_NatRisk=451, 
+type="Weibull", rcurve=recruit, max_time=60, cond_Events=49, cond_NatRisk=451, 
 cond_Time=10, units="Months")
 }
 \references{

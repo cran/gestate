@@ -4,14 +4,23 @@
 \alias{plot_npht}
 \title{Plot output from nph_traj}
 \usage{
-plot_npht(data, KM = TRUE, censor = TRUE, recruitment = TRUE,
-  events = TRUE, logHR = TRUE, power = TRUE,
-  include_frontier = TRUE, include_RMST = TRUE,
-  include_landmark = TRUE, alpha1 = 0.025,
-  legend_position = c("top_left", "top_right", "bottom_right"))
+plot_npht(
+  data,
+  KM = TRUE,
+  censor = TRUE,
+  recruitment = TRUE,
+  events = TRUE,
+  logHR = TRUE,
+  power = TRUE,
+  include_frontier = TRUE,
+  include_RMST = TRUE,
+  include_landmark = TRUE,
+  alpha1 = 0.025,
+  legend_position = c("top_left", "top_right", "bottom_right")
+)
 }
 \arguments{
-\item{data}{Full output list from nph_curve_trajectories}
+\item{data}{Full output list from nph_traj()}
 
 \item{KM}{Boolean to include KM plot (Default = TRUE)}
 
@@ -39,7 +48,7 @@ plot_npht(data, KM = TRUE, censor = TRUE, recruitment = TRUE,
 Returns NULL
 }
 \description{
-This function plots the output from nph_traj.\cr
+This function plots the output from nph_traj().\cr
 By default, it produces 6 plots:
 \itemize{
  \item{"KM plot"}{ Kaplan Meier plot for events. This is in patient time.}
@@ -53,8 +62,8 @@ Plots may be omitted via arguments.\cr
 All calculated powers automatically plotted unless specified otherwise.\cr
 }
 \examples{
-trial <- nph_traj(Weibull(100,1),Weibull(70,1),rcurve=LinearR(12,100,100),RMST=20,landmark=20,
-max_assessment=30)
+trial <- nph_traj(Weibull(100,1),Weibull(70,1),rcurve=LinearR(12,100,100),RMST=20,
+  landmark=20,max_assessment=30)
 
 plot_npht(trial)
 plot_npht(data=trial,KM=FALSE,censor=FALSE,recruitment=FALSE)

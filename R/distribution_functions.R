@@ -85,7 +85,7 @@ piece_recruit <- function(q,assess,lengths,rates){
 piece_recruitPDF <- function(x,assess,lengths,rates){
   rows <- length(lengths)
   rates <- c(0,rates[rows:1],0)
-  lengths <- c(assess-sum(lengths),c(lengths[rows:1]),max(q))
+  lengths <- c(assess-sum(lengths),c(lengths[rows:1]),max(x))
   cumlengths <- cumsum(lengths)
   location <- findInterval(x,cumlengths)+1
   out <- rates[location]/sum(rates*lengths)
@@ -93,7 +93,7 @@ piece_recruitPDF <- function(x,assess,lengths,rates){
 }
 
 ########################################################################################################
-# Function for the RF of a linear recruitment
+# Function for the RF of a piecewise linear recruitment
 # Takes as input:
 #  n: 	number of patients to simulate
 #  lengths: vector of lengths of recruitment rate periods
@@ -109,6 +109,77 @@ piece_sim <- function(n,lengths,rates){
   cumnumbers <- cumsum(numbers)
   locations <- findInterval(rand,cumnumbers)
   output <- cumtime[locations]+(rand-cumnumbers[locations])/rates[locations+1]
+  return(output)
+}
+
+########################################################################################################
+# Function for the censoring CDF of a piecewise linear recruitment with maximum follow-up time
+#  Note that the vectors for lengths and rates should be the same length
+#  This can be assured by using an RCurve object as the source, loaded using a recruitment matrix
+#
+# Takes as input:
+#  q: 	time
+#  assess:	time of assessment
+#  lengths: vector of lengths of recruitment period
+#  rates:	vector of recruitment rates of recruitment periods
+########################################################################################################
+piece_recruitMaxF <- function(q,assess,lengths,rates,maxF){
+  rows <- length(lengths)
+  rates <- c(0,rates[rows:1],0)
+  lengths <- c(assess-sum(lengths),c(lengths[rows:1]),max(q))
+  cumlengths <- cumsum(lengths)
+  cumpats <- c(0,cumsum(rates*lengths))
+  location <- findInterval(q,cumlengths)+1
+  cumlengths <- c(0,cumlengths)
+  out <- (cumpats[location]+rates[location]*(q-cumlengths[location]))/sum(rates*lengths)
+  out[q >= maxF] <- 1
+  return(out)
+}
+
+########################################################################################################
+# Function for the censoring PDF of a piecewise linear recruitment with maximum follow-up time
+#  Note that the vectors for lengths and rates should be the same length
+#  This can be assured by using an RCurve object as the source, loaded using a recruitment matrix
+#
+# Takes as input:
+#  x: 	time
+#  assess:	time of assessment
+#  lengths: vector of lengths of recruitment period
+#  rates:	vector of recruitment rates of recruitment periods
+########################################################################################################
+piece_recruitPDFMaxF <- function(x,assess,lengths,rates,maxF){
+  rows <- length(lengths)
+  rates <- c(0,rates[rows:1],0)
+  lengths <- c(assess-sum(lengths),c(lengths[rows:1]),max(x))
+  cumlengths <- cumsum(lengths)
+  location <- findInterval(x,cumlengths)+1
+  out <- rates[location]/sum(rates*lengths)
+  maximum <- findInterval(maxF-0.1,cumlengths)+1
+  cumpats <- c(0,cumsum(rates*lengths))
+  patsatmax <- cumpats[maximum] + rates[maximum]*((maxF-0.1)-cumlengths[maximum-1])
+  out[x >= (maxF-0.1) & x <= maxF] <- 10*(sum(rates*lengths)-patsatmax)/sum(rates*lengths)
+  out[x > maxF] <- 0
+  return(out)
+}
+
+########################################################################################################
+# Function for the RF of piecewise linear recruitment with maximum follow-up time
+# Takes as input:
+#  n: 	number of patients to simulate
+#  lengths: vector of lengths of recruitment rate periods
+#  rates:   vector of recruitment rates per period
+########################################################################################################
+piece_simMaxF <- function(n,lengths,rates,maxF){
+  lengths <- c(0,lengths)
+  rates <- c(0,rates)
+  numbers <- lengths*rates
+  total <- sum(numbers)
+  rand <- runif(n=n,min=0,max=total)
+  cumtime <- cumsum(lengths)
+  cumnumbers <- cumsum(numbers)
+  locations <- findInterval(rand,cumnumbers)
+  output <- cumtime[locations]+(rand-cumnumbers[locations])/rates[locations+1]
+  output <- pmin(output,maxF)
   return(output)
 }
 
@@ -185,11 +256,21 @@ dpieceexp <- function(x,start,rate){
 #  rate:	vector of rates of pieces (length must match length of start)
 ########################################################################################################
 rpieceexp <- function(n,start,rate){
+  return(qpieceexp(runif(n),start,rate))
+}
+
+########################################################################################################
+# Function for the inverse-CDF of a piecewise exponential distribution
+# Takes as input:
+#  p: 	probability
+#  start:   vector of lengths of pieces (first element must be 0, must be strictly ascending)
+#  rate:	vector of rates of pieces (length must match length of start)
+########################################################################################################
+qpieceexp <- function(p,start,rate){
   lengths <- length(start)
-  draw <- runif(n)
   transitions <- cumprod(c(1,exp(-rate[1:(lengths-1)]*diff(start))))
-  places <- (lengths+1) - findInterval(draw,c(0,rev(transitions)))
-  output <- start[places]+(log(transitions[places]) - log(draw))/rate[places]
+  places <- (lengths+1) - findInterval(1-p,c(0,rev(transitions)))
+  output <- start[places]+(log(transitions[places]) - log(1-p))/rate[places]
   return(output)
 }
 
@@ -242,6 +323,26 @@ rmixexp <- function(n,props,lambdas){
 }
 
 ########################################################################################################
+# Function for the inverse-CDF of a mixed exponential distribution
+# Meant for use solely within GESTATE's architecture: input checking done at object level
+# Takes as input:
+#  p: 	probability
+#  props:   vector of proportions (must sum to 1. NB: these are not checked!)
+#  lambdas:	vector of rates (length must match length props)
+########################################################################################################
+qmixexp <- function(p,props,lambdas){
+  q <- rep(NA,length(p))
+  rootfunction <- function(t,p,props,lambdas){
+    sum(props*exp(-lambdas*t))+p-1
+  }
+  for (i in 1:length(p)){
+    limits <- qexp(p[i],lambdas)
+    q[i] <- uniroot(rootfunction,lower=min(limits),upper=max(limits),p=p[i],props=props,lambdas=lambdas)$root
+  }
+  return(q)
+}
+
+########################################################################################################
 # Function for the CDF of a mixed weibull distribution
 # Meant for use solely within GESTATE's architecture: input checking done at object level
 # Takes as input:
@@ -284,7 +385,7 @@ dmixwei <- function(x,props,betas,alphas){
 # Meant for use solely within GESTATE's architecture: input checking done at object level
 # Takes as input:
 #  n: 	number of random draws to make
-#  start:   vector of proportions (Must sum to 1. NB: these are not checked!)
+#  props:   vector of proportions (Must sum to 1. NB: these are not checked!)
 #  betas:	vector of shape parameters (length must match length props)
 #  alphas:	vector of scale parameters (length must match length props)
 ########################################################################################################
@@ -292,6 +393,27 @@ rmixwei <- function(n,props,betas,alphas){
   assignment <- sample.int(n=length(props),size=n,replace=TRUE,prob=props)
   output <- rweibull(n=n,shape=betas[assignment],scale=alphas[assignment])
   return(output)
+}
+
+########################################################################################################
+# Function for the inverse-CDF of a mixed weibull distribution
+# Meant for use solely within GESTATE's architecture: input checking done at object level
+# Takes as input:
+#  p: 	probability
+#  props:   vector of proportions (must sum to 1. NB: these are not checked!)
+#  betas:	vector of shape parameters (length must match length props)
+#  alphas:	vector of scale parameters (length must match length props)
+########################################################################################################
+qmixwei <- function(p,props,betas,alphas){
+  q <- rep(NA,length(p))
+  rootfunction <- function(t,p,props,betas,alphas){
+    sum(props*exp(-(t/alphas)^betas))+p-1
+  }
+  for (i in 1:length(p)){
+    limits <- qweibull(p[i],betas,alphas)
+    q[i] <- uniroot(rootfunction,lower=min(limits),upper=max(limits),p=p[i],props=props,betas=betas,alphas=alphas)$root
+  }
+  return(q)
 }
 
 ########################################################################################################
@@ -319,6 +441,18 @@ dloglog <- function(x, scale, shape){
 }
 
 ########################################################################################################
+# Function for the inverse-CDF of a Log-Logistic distribution
+# Meant for use solely within GESTATE's architecture: input checking done at object level
+# Takes as input:
+#  p: 	probability
+#  scale:   scale parameter
+#  shape:	shape parameter
+########################################################################################################
+qloglog <- function(p, scale, shape){
+  (p * scale ^ shape / (1 - p)) ^ (1/shape)
+}
+
+########################################################################################################
 # Function for the RF of a Log-Logistic distribution
 # Meant for use solely within GESTATE's architecture: input checking done at object level
 # Takes as input:
@@ -327,9 +461,7 @@ dloglog <- function(x, scale, shape){
 #  shape:	shape parameter
 ########################################################################################################
 rloglog <- function(n, scale, shape){
-  draw <- runif(n)
-  output <- (draw * scale ^ shape / (1 - draw)) ^ (1/shape)
-  return(output)
+  qloglog(runif(n),scale,shape)
 }
 
 ########################################################################################################
@@ -355,6 +487,17 @@ dgompertz <- function(x, scale, shape){
 pgompertz <- function(q, scale, shape){
   1 - exp(shape - shape * exp(scale * q))
 }
+########################################################################################################
+# Function for the inverse-CDF of a Gompertz distribution
+# Meant for use solely within GESTATE's architecture: input checking done at object level
+# Takes as input:
+#  p: 	probability
+#  scale:   scale parameter
+#  shape:	shape parameter
+########################################################################################################
+qgompertz <- function(p, scale, shape){
+  log(1 - log(1 - p) / shape) / scale
+}
 
 ########################################################################################################
 # Function for the RF of a Gompertz distribution
@@ -365,9 +508,7 @@ pgompertz <- function(q, scale, shape){
 #  shape:	shape parameter
 ########################################################################################################
 rgompertz <- function(n, scale, shape){
-  draw <- runif(n)
-  output <- log(1 - log(1 - draw) / shape) / scale
-  return(output)
+  qgompertz(runif(n),scale,shape)
 }
 
 ########################################################################################################
@@ -399,6 +540,8 @@ pggamma <- function(q, scale, shape, family){
 ########################################################################################################
 # Function for the RF of a Generalised Gamma distribution
 # Meant for use solely within GESTATE's architecture: input checking done at object level
+# To maximise speed, the function uses a fast rejection sampling approach where shape > 1, 
+#   and a slower qgamma-based approach where shape <= 1. 
 # Takes as input:
 #  n: 	number of random draws to make
 #  scale:   scale parameter
@@ -406,7 +549,15 @@ pggamma <- function(q, scale, shape, family){
 #  family:  family parameter
 ########################################################################################################
 rggamma <- function(n, scale, shape, family){
-  if(shape <= 1)stop("Unable to simulate a generalised gamma distribution with shape (eta) <= 1")
+# This first approach can apply to any valid parameter combination, but is slower than rejection sampling
+# Rejection sampling only works when shape >1 however, so we use this slower method to cover the missing parameter space. 
+
+  ##qgamma-based approach
+  if(shape <= 1){
+    draws <- runif(n)
+    return(qggamma(draws,scale,shape,family))
+  }
+  ## Rejection sampling approach
   ## N: number of samples required
   K = 4 * shape ^ shape * exp(-shape) / (sqrt(2 * shape - 1) * gamma(shape)) # expected number of samples required for 1 success
   N = n * K + 10 * sqrt(n * (K - 1) / K ^ 2) # total number of samples required (add 10*SE in order to guarantee a sufficient number)
@@ -417,4 +568,18 @@ rggamma <- function(n, scale, shape, family){
   ## select the first n successful samples
   index <- which(log(u1 * u2 * (1 - u1)) <= shape + log(1/4) + shape * family * V - shape * exp(family * V))
   return(scale * shape ^ (1 / family) * exp(V[index[1:n]]))
+}
+
+
+########################################################################################################
+# Function for the inverse-CDF of a Generalised Gamma distribution
+# Meant for use solely within GESTATE's architecture: input checking done at object level
+# Takes as input:
+#  p: 	probability
+#  scale:   scale parameter (theta)
+#  shape:	shape parameter (eta)
+#  family:  family parameter (rho)
+########################################################################################################
+qggamma <- function(p,scale, shape, family){
+  q <- scale*qgamma(p,shape,1)^(1/family)
 }

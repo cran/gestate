@@ -33,8 +33,7 @@ function(input, output, session) {
                                          column(6 , numericInput('eta_ll_event_active_ae', 'Shape parameter', min=0.001, max=1000, value=1, step=0.001))),
            'gompertz'         = fluidRow(column(6 , numericInput('theta_gomp_event_active_ae', 'Scale parameter', min=0.0001, max=1000, value=0.05, step=0.0001)),
                                          column(6 , numericInput('eta_gomp_event_active_ae', 'Shape parameter', min=0.001, max=1000, value=1, step=0.001))),
-           'ggamma'           = fluidRow(column(6 , numericInput('theta_gg_event_active_ae', 'Scale parameter', min=0.001, max=1000, value=20, step=0.001)),
-                                         column(6 , helpText('Shape parameter must be greater than 1.')))
+           'ggamma'           = fluidRow(column(6 , numericInput('theta_gg_event_active_ae', 'Scale parameter', min=0.001, max=1000, value=20, step=0.001)))
     )
   })
 
@@ -62,7 +61,7 @@ function(input, output, session) {
     }else if(input$event_active_distribution_ae == 'gompertz'){
     }else if(input$event_active_distribution_ae == 'ggamma'){
       fluidRow(column(6 , numericInput('rho_gg_event_active_ae', 'Family parameter', min=0.001, max=1000, value=2, step=0.001)),
-               column(6 , numericInput('eta_gg_event_active_ae', 'Shape parameter', min=1.001, max=1000, value=1.001, step=0.001)))
+               column(6 , numericInput('eta_gg_event_active_ae', 'Shape parameter', min=0.001, max=1000, value=1, step=0.001)))
     }
   })
 
@@ -97,8 +96,7 @@ function(input, output, session) {
                                          column(6 , numericInput('eta_ll_event_control_ae', 'Shape parameter', min=0.001, max=1000, value=1, step=0.001))),
            'gompertz'         = fluidRow(column(6 , numericInput('theta_gomp_event_control_ae', 'Scale parameter', min=0.0001, max=1000, value=0.05, step=0.0001)),
                                          column(6 , numericInput('eta_gomp_event_control_ae', 'Shape parameter', min=0.001, max=1000, value=1, step=0.001))),
-           'ggamma'           = fluidRow(column(6 , numericInput('theta_gg_event_control_ae', 'Scale parameter', min=0.001, max=1000, value=20, step=0.001)),
-                                         column(6 , helpText('Shape parameter must be greater than 1.')))
+           'ggamma'           = fluidRow(column(6 , numericInput('theta_gg_event_control_ae', 'Scale parameter', min=0.001, max=1000, value=20, step=0.001)))
     )
   })
 
@@ -122,7 +120,7 @@ function(input, output, session) {
     }else if(input$event_control_distribution_ae == 'gompertz'){
     }else if(input$event_control_distribution_ae == 'ggamma'){
       fluidRow(column(6 , numericInput('rho_gg_event_control_ae', 'Family parameter', min=0.001, max=1000, value=2, step=0.001)),
-               column(6 , numericInput('eta_gg_event_control_ae', 'Shape parameter', min=1.001, max=1000, value=1.001, step=0.001)))
+               column(6 , numericInput('eta_gg_event_control_ae', 'Shape parameter', min=0.001, max=1000, value=1, step=0.001)))
     }
   })
 
@@ -155,8 +153,7 @@ function(input, output, session) {
                                          column(6 , numericInput('eta_ll_cens_active_ae', 'Shape parameter', min=0.001, max=1000, value=2, step=0.001))),
            'gompertz'         = fluidRow(column(6 , numericInput('theta_gomp_cens_active_ae', 'Scale parameter', min=0.0001, max=1000, value=0.005, step=0.0001)),
                                          column(6 , numericInput('eta_gomp_cens_active_ae', 'Shape parameter', min=0.001, max=1000, value=2, step=0.001))),
-           'ggamma'           = fluidRow(column(6 , numericInput('theta_gg_cens_active_ae', 'Scale parameter', min=0.001, max=1000, value=70, step=0.001)),
-                                         column(6 , helpText('Shape parameter must be greater than 1.'))),
+           'ggamma'           = fluidRow(column(6 , numericInput('theta_gg_cens_active_ae', 'Scale parameter', min=0.001, max=1000, value=70, step=0.001))),
            'blank'            = NULL
     )
   })
@@ -181,7 +178,7 @@ function(input, output, session) {
     }else if(input$cens_active_distribution_ae == 'gompertz'){
     }else if(input$cens_active_distribution_ae == 'ggamma'){
       fluidRow(column(6 , numericInput('rho_gg_cens_active_ae', 'Family parameter', min=0.001, max=100, value=2, step=0.001)),
-               column(6 , numericInput('eta_gg_cens_active_ae', 'Shape parameter', min=1.001, max=100, value=1.001, step=0.001)))
+               column(6 , numericInput('eta_gg_cens_active_ae', 'Shape parameter', min=0.001, max=100, value=1, step=0.001)))
     }else if(input$cens_active_distribution_ae == 'blank'){
     }
   })
@@ -215,8 +212,7 @@ function(input, output, session) {
                                          column(6 , numericInput('eta_ll_cens_control_ae', 'Shape parameter', min=0.001, max=1000, value=2, step=0.001))),
            'gompertz'         = fluidRow(column(6 , numericInput('theta_gomp_cens_control_ae', 'Scale parameter', min=0.0001, max=1000, value=0.005, step=0.0001)),
                                          column(6 , numericInput('eta_gomp_cens_control_ae', 'Shape parameter', min=0.001, max=1000, value=2, step=0.001))),
-           'ggamma'           = fluidRow(column(6 , numericInput('theta_gg_cens_control_ae', 'Scale parameter', min=0.001, max=1000, value=70, step=0.001)),
-                                         column(6 , helpText('Shape parameter must be greater than 1.'))),
+           'ggamma'           = fluidRow(column(6 , numericInput('theta_gg_cens_control_ae', 'Scale parameter', min=0.001, max=1000, value=70, step=0.001))),
            'blank'            = NULL
     )
   })
@@ -241,7 +237,7 @@ function(input, output, session) {
     }else if(input$cens_control_distribution_ae == 'gompertz'){
     }else if(input$cens_control_distribution_ae == 'ggamma'){
       fluidRow(column(6 , numericInput('rho_gg_cens_control_ae', 'Family parameter', min=0.001, max=1000, value=2, step=0.001)),
-               column(6 , numericInput('eta_gg_cens_control_ae', 'Shape parameter', min=1.001, max=1000, value=1.001, step=0.001)))
+               column(6 , numericInput('eta_gg_cens_control_ae', 'Shape parameter', min=0.001, max=1000, value=1, step=0.001)))
     }else if(input$cens_control_distribution_ae == 'blank'){
     }
   })
@@ -796,7 +792,6 @@ msg <- " "
     ## perform checks of inputs
     if(getType(control_ecurve) != 'Lognormal' && getType(control_ecurve) != 'PieceExponential'){
       error1 <- ifelse(any(c(do.call('cbind', getParams(control_ecurve))) <= 0), 'Misspecified parameter value for event distribution (control arm).', '')
-      if(getType(control_ecurve) == 'GGamma' && getParams(control_ecurve)[[2]] <= 1){error1 <- 'Misspecified shape parameter for the generalised gamma event distribution (control arm): Must be greater than 1.'}
     }else if(getType(control_ecurve) == 'Lognormal'){
       error1 <- ifelse(getParams(control_ecurve)[[2]] <= 0, 'Misspecified parameter value for event distribution (control arm).', '')
     }else if(getType(control_ecurve) == 'PieceExponential'){
@@ -812,7 +807,6 @@ msg <- " "
     }
     if(getType(active_ecurve) != 'Lognormal' && getType(active_ecurve) != 'PieceExponential'){
       error2 <- ifelse(any(c(do.call('cbind', getParams(active_ecurve))) <= 0), 'Misspecified parameter value for event distribution (active arm).', '')
-      if(getType(active_ecurve) == 'GGamma' && getParams(active_ecurve)[[2]] <= 1){error1 <- 'Misspecified shape parameter for the generalised gamma event distribution (active arm): Must be greater than 1.'}
     }else if(getType(active_ecurve) == 'Lognormal'){
       error2 <- ifelse(getParams(active_ecurve)[[2]] <= 0, 'Misspecified parameter value for event distribution (active arm).', '')
     }else if(getType(active_ecurve) == 'PieceExponential'){
@@ -828,7 +822,6 @@ msg <- " "
     }
     if(getType(control_dcurve) != 'Lognormal' && getType(control_dcurve) != 'PieceExponential' && getType(control_dcurve) != 'Blank'){
       error3 <- ifelse(any(c(do.call('cbind', getParams(control_dcurve))) <= 0), 'Misspecified parameter value for censoring distribution (control arm).', '')
-      if(getType(control_dcurve) == 'GGamma' && getParams(control_dcurve)[[2]] <= 1){error1 <- 'Misspecified shape parameter for the generalised gamma censoring distribution (control arm): Must be greater than 1.'}
     }else if(getType(control_dcurve) == 'Lognormal'){
       error3 <- ifelse(getParams(control_dcurve)[[2]] <= 0, 'Misspecified parameter value for censoring distribution (control arm).', '')
     }else if(getType(control_dcurve) == 'PieceExponential'){
@@ -846,7 +839,6 @@ msg <- " "
     }
     if(getType(active_dcurve) != 'Lognormal' && getType(active_dcurve) != 'PieceExponential' && getType(active_dcurve) != 'Blank'){
       error4 <- ifelse(any(c(do.call('cbind', getParams(active_dcurve))) <= 0), 'Misspecified parameter value for censoring distribution (active arm).', '')
-      if(getType(active_dcurve) == 'GGamma' && getParams(active_dcurve)[[2]] <= 1){error1 <- 'Misspecified shape parameter for the generalised gamma censoring distribution (active arm): Must be greater than 1.'}
     }else if(getType(active_dcurve) == 'Lognormal'){
       error4 <- ifelse(getParams(active_dcurve)[[2]] <= 0, 'Misspecified parameter value for censoring distribution (active arm).', '')
     }else if(getType(active_dcurve) == 'PieceExponential'){
@@ -890,7 +882,7 @@ msg <- " "
   output$SS_caveat_ae <- renderText({
     ae <- nph_curve_trajectories_eR()
     msg <- ''
-    if(ae[[1]][1] == ''){msg <- 'Below is a table with estimated values for several key trial parameters. Note that the estimated required SS column provides an estimate at each assessment time of the sample size required to reach the pre-specified power if all parameters other than patient numbers are kept the same (based on Schoenfeld). This sample size should be used only as a tool to guide future runs of GESTATE.'}
+    if(ae[[1]][1] == ''){msg <- 'Below is a table with estimated values for several key trial parameters. Note that the estimated required SS column provides an estimate at each assessment time of the sample size required to reach the pre-specified power if all parameters other than patient numbers are kept the same (based on Schoenfeld). This sample size should be used only as a tool to guide future runs of gestate.'}
     msg
   })
 
@@ -1502,7 +1494,6 @@ msg <- " "
     ## perform checks of inputs
     if(getType(control_ecurve) != 'Lognormal' && getType(control_ecurve) != 'PieceExponential'){
       error1 <- ifelse(any(c(do.call('cbind', getParams(control_ecurve))) <= 0), 'Misspecified parameter value for event distribution (control arm).', '')
-      if(getType(control_ecurve) == 'GGamma' && getParams(control_ecurve)[[2]] <= 1){error1 <- 'Misspecified shape parameter for the generalised gamma event distribution (control arm): Must be greater than 1.'}
     }else if(getType(control_ecurve) == 'Lognormal'){
       error1 <- ifelse(getParams(control_ecurve)[[2]] <= 0, 'Misspecified parameter value for event distribution (control arm).', '')
     }else if(getType(control_ecurve) == 'PieceExponential'){
@@ -1518,7 +1509,6 @@ msg <- " "
     }
     if(getType(active_ecurve) != 'Lognormal' && getType(active_ecurve) != 'PieceExponential'){
       error2 <- ifelse(any(c(do.call('cbind', getParams(active_ecurve))) <= 0), 'Misspecified parameter value for event distribution (active arm).', '')
-      if(getType(active_ecurve) == 'GGamma' && getParams(active_ecurve)[[2]] <= 1){error1 <- 'Misspecified shape parameter for the generalised gamma event distribution (active arm): Must be greater than 1.'}
     }else if(getType(active_ecurve) == 'Lognormal'){
       error2 <- ifelse(getParams(active_ecurve)[[2]] <= 0, 'Misspecified parameter value for event distribution (active arm).', '')
     }else if(getType(active_ecurve) == 'PieceExponential'){
@@ -1534,7 +1524,6 @@ msg <- " "
     }
     if(getType(control_dcurve) != 'Lognormal' && getType(control_dcurve) != 'PieceExponential' && getType(control_dcurve) != 'Blank'){
       error3 <- ifelse(any(c(do.call('cbind', getParams(control_dcurve))) <= 0), 'Misspecified parameter value for censoring distribution (control arm).', '')
-      if(getType(control_dcurve) == 'GGamma' && getParams(control_dcurve)[[2]] <= 1){error1 <- 'Misspecified shape parameter for the generalised gamma censoring distribution (control arm): Must be greater than 1.'}
     }else if(getType(control_dcurve) == 'Lognormal'){
       error3 <- ifelse(getParams(control_dcurve)[[2]] <= 0, 'Misspecified parameter value for censoring distribution (control arm).', '')
     }else if(getType(control_dcurve) == 'PieceExponential'){
@@ -1552,7 +1541,6 @@ msg <- " "
     }
     if(getType(active_dcurve) != 'Lognormal' && getType(active_dcurve) != 'PieceExponential' && getType(active_dcurve) != 'Blank'){
       error4 <- ifelse(any(c(do.call('cbind', getParams(active_dcurve))) <= 0), 'Misspecified parameter value for censoring distribution (active arm).', '')
-      if(getType(active_dcurve) == 'GGamma' && getParams(active_dcurve)[[2]] <= 1){error1 <- 'Misspecified shape parameter for the generalised gamma censoring distribution (active arm): Must be greater than 1.'}
     }else if(getType(active_dcurve) == 'Lognormal'){
       error4 <- ifelse(getParams(active_dcurve)[[2]] <= 0, 'Misspecified parameter value for censoring distribution (active arm).', '')
     }else if(getType(active_dcurve) == 'PieceExponential'){

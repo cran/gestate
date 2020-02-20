@@ -2,12 +2,19 @@
 % Please edit documentation in R/event_prediction.R
 \name{fit_KM}
 \alias{fit_KM}
-\title{Fit Weibull and Log-Normal survival curves to Kaplan Meier estimates}
+\title{Fit Weibull, Log-Normal or Exponential survival curves to Kaplan Meier estimates}
 \usage{
-fit_KM(KMcurve, Survival = "Survival", Time = "Time",
-  type = c("automatic", "Weibull", "Lognormal"), weighting = TRUE,
-  Weights = "Weights", Weight_power = 1, startbeta = 1,
-  startsigma = 1)
+fit_KM(
+  KMcurve,
+  Survival = "Survival",
+  Time = "Time",
+  type = c("automatic", "Weibull", "Lognormal", "Exponential"),
+  weighting = TRUE,
+  Weights = "Weights",
+  Weight_power = 1,
+  startbeta = 1,
+  startsigma = 1
+)
 }
 \arguments{
 \item{KMcurve}{The dataframe object containing the survival data in lifetable form}
@@ -17,7 +24,7 @@ fit_KM(KMcurve, Survival = "Survival", Time = "Time",
 \item{Time}{The column name for the times. Default is "Time"}
 
 \item{type}{Type of event curve to fit.Default is "Automatic", fitting both Weibull and Log-normal curves.
-Alternatively accepts "Weibull" or "Lognormal" to force the type.}
+Alternatively accepts "Weibull", "Lognormal" or "Exponential" to force the type.}
 
 \item{weighting}{Boolean for whether to use weighting. Default=TRUE as it greatly improves curve fitting.}
 
@@ -34,7 +41,7 @@ Returns a 3-item list providing information needed to define a Curve object:
 \itemize{
  \item{"Item 1"}{The type of Curve object fitted.}
  \item{"Item 2"}{A list of fitted parameters for the curve type.}
- \item{"Item 3"}{A vector containing the covariance-matrix parameters for the curve type. Note that these are heavily underestimated as the data going into the regression is not independent.}
+ \item{"Item 3"}{A placeholder vector of NAs where the covariance-matrix parameters should be.}
  \item{"Item 4"}{A data frame containing the goodness of fit metrics for each curve type.}
 }
 }
@@ -47,7 +54,7 @@ This function is primarily used by event_prediction function, but also useful fo
 One useful aspect of this is for fitting the 'inverse KM', where drop-outs are events, while events and 'time-outs' are censored.
    This allows for finding a suitable parameterisation for the censoring curve.\cr
 Primary advantage over likelihood-based methods is ability to use aggregated, rather than patient-level data.
-Primary disadvantage is that the covariance matrix is heavily underestimated (essentially unusable) due to strong correlation between the input data points going into the regression.
+Primary disadvantage is that the covariance matrix is unusable due to strong correlation between the input data points going into the regression.
 }
 \examples{
 recruit <- PieceR(matrix(c(rep(1,12),10,15,25,30,45,60,55,50,65,60,55,30),ncol=2),1)

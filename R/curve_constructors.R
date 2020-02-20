@@ -37,7 +37,7 @@
 Weibull <- function(alpha,beta=1){
   if(length(beta)!=1){stop("beta parameter must be a single value")}
   if(length(alpha)!=1){stop("alpha parameter must be a single value")}
-  new("Curve",type="Weibull",PDF="dweibull",CDF="pweibull",RF="rweibull",paramno=2,pnames=c("scale","shape"),pvalue=list(alpha,beta))
+  new("Curve",type="Weibull",PDF="dweibull",CDF="pweibull",RF="rweibull",inverse="qweibull",paramno=2,pnames=c("scale","shape"),pvalue=list(alpha,beta))
 }
 
 #' Log-normal Curve constructor function
@@ -59,7 +59,7 @@ Weibull <- function(alpha,beta=1){
 Lognormal <- function(mu,sigma=1){
   if(length(mu)!=1){stop("mu parameter must be a single value")}
   if(length(sigma)!=1){stop("sigma parameter must be a single value")}
-  new("Curve",type="Lognormal",PDF="dlnorm",CDF="plnorm",RF="rlnorm",paramno=2,pnames=c("meanlog","sdlog"),pvalue=list(mu,sigma))
+  new("Curve",type="Lognormal",PDF="dlnorm",CDF="plnorm",RF="rlnorm",inverse="qlnorm",paramno=2,pnames=c("meanlog","sdlog"),pvalue=list(mu,sigma))
 }
 
 #' Exponential Curve constructor function
@@ -77,7 +77,7 @@ Lognormal <- function(mu,sigma=1){
 #' @export
 Exponential <- function(lambda){
   if(length(lambda)!=1){stop("lambda parameter must be a single value")}
-  new("Curve",type="Exponential",PDF="dexp",CDF="pexp",RF="rexp",paramno=1,pnames="rate",pvalue=list(lambda))
+  new("Curve",type="Exponential",PDF="dexp",CDF="pexp",RF="rexp",inverse="qexp",paramno=1,pnames="rate",pvalue=list(lambda))
 }
 
 #' Blank Curve constructor function
@@ -93,7 +93,7 @@ Exponential <- function(lambda){
 #' Blank()
 #' @export
 Blank <- function(){
-  new("Curve",type="Blank",PDF="pmin",CDF="pmin",RF="INF",paramno=1,pnames="Zero",pvalue=list(0))
+  new("Curve",type="Blank",PDF="pmin",CDF="pmin",RF="INF",inverse="INF",paramno=1,pnames="Zero",pvalue=list(0))
 }
 
 #' Piecewise Exponential Curve constructor function
@@ -112,7 +112,7 @@ PieceExponential <- function(start,lambda){
   if(length(start)!=length(lambda)){stop("Piecewise exponential curve has mismatched length 'start' and 'lambda' vectors")}
   if(start[1]!=0){stop("First element of piecewise exponential curve must start at 0")}
   if(is.unsorted(start,strictly=TRUE)){stop("Start times must be in ascending order with no duplicates")}
-  new("Curve",type="PieceExponential",PDF="dpieceexp",CDF="ppieceexp",RF="rpieceexp",paramno=2,pnames=c("start","rate"),pvalue=list(start,lambda))
+  new("Curve",type="PieceExponential",PDF="dpieceexp",CDF="ppieceexp",RF="rpieceexp",inverse="qpieceexp",paramno=2,pnames=c("start","rate"),pvalue=list(start,lambda))
 }
 
 #' Mixture Exponential Curve constructor function
@@ -131,7 +131,7 @@ PieceExponential <- function(start,lambda){
 MixExp <- function(props,lambdas){
   if(length(props)!=length(lambdas)){stop("Mixture exponential curve has mismatched length 'props' and 'lambdas' vectors")}
   if(sum(props)!=1){stop("Proportions must sum to 1!")}
-  new("Curve",type="MixExp",PDF="dmixexp",CDF="pmixexp",RF="rmixexp",paramno=2,pnames=c("props","lambdas"),pvalue=list(props,lambdas))
+  new("Curve",type="MixExp",PDF="dmixexp",CDF="pmixexp",RF="rmixexp",inverse="qmixexp",paramno=2,pnames=c("props","lambdas"),pvalue=list(props,lambdas))
 }
 
 #' Mixture Weibull Curve constructor function
@@ -152,7 +152,7 @@ MixWei <- function(props,alphas,betas=rep(1,length(props))){
   if(length(props)!=length(alphas)){stop("Mixture weibull curve has mismatched length 'props' and 'alphas' vectors")}
   if(length(props)!=length(betas)){stop("Mixture weibull curve has mismatched length 'props' and 'betas' vectors")}
   if(sum(props)!=1){stop("Proportions must sum to 1!")}
-  new("Curve",type="MixWei",PDF="dmixwei",CDF="pmixwei",RF="rmixwei",paramno=3,pnames=c("props","betas","alphas"),pvalue=list(props,betas,alphas))
+  new("Curve",type="MixWei",PDF="dmixwei",CDF="pmixwei",RF="rmixwei",inverse="qmixwei",paramno=3,pnames=c("props","betas","alphas"),pvalue=list(props,betas,alphas))
 }
 
 #' Log-logistic Curve constructor function
@@ -169,7 +169,7 @@ MixWei <- function(props,alphas,betas=rep(1,length(props))){
 #' @examples LogLogistic(theta=20,eta=2)
 #' @export
 LogLogistic <- function(theta, eta){
-  new('Curve', type='LogLogistic', PDF='dloglog', CDF='ploglog', RF='rloglog',
+  new('Curve', type='LogLogistic', PDF='dloglog', CDF='ploglog', RF='rloglog',inverse='qloglog',
       paramno=2, pnames=c('scale', 'shape'), pvalue=list(theta, eta))
 }
 
@@ -187,7 +187,7 @@ LogLogistic <- function(theta, eta){
 #' @examples Gompertz(theta=0.02,eta=2)
 #' @export
 Gompertz <- function(theta, eta){
-  new('Curve', type='Gompertz', PDF='dgompertz', CDF='pgompertz', RF='rgompertz',
+  new('Curve', type='Gompertz', PDF='dgompertz', CDF='pgompertz', RF='rgompertz',inverse='qgompertz',
       paramno=2, pnames=c('scale', 'shape'), pvalue=list(theta, eta))
 }
 
@@ -202,15 +202,14 @@ Gompertz <- function(theta, eta){
 #' @details The Generalised Gamma distribution has parameterisation:\cr
 #' f(x) = (rho x^((rho eta)-1) e^(-(x/theta)^rho) theta^(-rho eta) )/Gamma(eta)\cr
 #' F(x) = LPGamma(eta,(x/theta)^rho)/Gamma(eta)\cr
-#' where Gamma is the gamma function, and LPGamma is the lower partial gamma function\cr
-#' Please note that there is a restriction when simulating that eta must be greater than 1. No such restriction applies for analytical calculations.\cr
+#' where Gamma is the gamma function, and LPGamma is the lower partial gamma function.\cr
+#' As of v1.4.0, all values of eta are now fully supported.\cr
 #' @author Jasmin Ruehl
 #' @references Tadikamalla PR, Random Sampling from the Generalized Gamma Distribution. Computing, 1979, 23(2), 199-203.
 #' @examples GGamma(theta=20,eta=2,rho=0.7)
 #' @export
 GGamma <- function(theta, eta, rho){
-  if(eta <= 1)message("Note: Generalised Gamma Curve object has been specified with eta <= 1. Curve will be usable in analytical calculations but not in simulations.")
-  new('Curve', type='GGamma', PDF='dggamma', CDF='pggamma', RF='rggamma',
+  new('Curve', type='GGamma', PDF='dggamma', CDF='pggamma', RF='rggamma',inverse="qggamma",
       paramno=3, pnames=c('scale', 'shape', 'family'), pvalue=list(theta, eta, rho))
 }
 
@@ -229,28 +228,28 @@ GGamma <- function(theta, eta, rho){
 #' This creates a RCurve object for a linear recruitment distribution.\cr
 #' RCurve objects contain all necessary information to describe a recruitment distribution. They are a particular type of Curve object containing additional recruitment-related information, including patient numbers and the randomisation ratio.\cr
 #' @param rlength Length of recruitment.
-#' @param Nactive Number of patients recruited in active arm.
-#' @param Ncontrol Number of patients recruited in active arm.
+#' @param Nactive Number of patients recruited in the active arm.
+#' @param Ncontrol Number of patients recruited in the control arm.
 #' @details This RCurve is used when it is expected that patients enter a trial at a constant rate until the required number is achieved.
 #' @author James Bell
 #' @examples LinearR(rlength=12,Nactive=100,Ncontrol=100)
 #' @export
 LinearR <- function(rlength,Nactive,Ncontrol){
-  new("RCurve",type="LinearR",PDF="linear_recruitPDF",CDF="linear_recruit",RF="linear_sim",paramno=1,pnames="rlength",pvalue=list(rlength),N=Nactive+Ncontrol,Nactive=Nactive,Ncontrol=Ncontrol,Ratio=Nactive/Ncontrol,Length=rlength)
+  new("RCurve",type="LinearR",PDF="linear_recruitPDF",CDF="linear_recruit",RF="linear_sim",inverse="NULL",paramno=1,pnames="rlength",pvalue=list(rlength),N=Nactive+Ncontrol,Nactive=Nactive,Ncontrol=Ncontrol,Ratio=Nactive/Ncontrol,Length=rlength)
 }
 
 #' InstantR RCurve constructor function
 #'
 #' This creates a RCurve object for an instant recruitment distribution.\cr
 #' RCurve objects contain all necessary information to describe a recruitment distribution. They are a particular type of Curve object containing additional recruitment-related information, including patient numbers and the randomisation ratio.\cr
-#' @param Nactive Number of patients recruited in active arm.
-#' @param Ncontrol Number of patients recruited in active arm.
+#' @param Nactive Number of patients recruited in the active arm.
+#' @param Ncontrol Number of patients recruited in the control arm.
 #' @details This RCurve is used when either all patients enter at the same time, or a fixed-length follow-up design is used. Note that a PDF function is not provided for this RCurve type, but is not required for standard calculations.
 #' @author James Bell
 #' @examples InstantR(Nactive=100,Ncontrol=100)
 #' @export
 InstantR <- function(Nactive,Ncontrol){
-  new("RCurve",type="InstantR",PDF="NOT_DEFINED",CDF="instant_recruit",RF="instant_sim",paramno=1,pnames="Dummy",pvalue=list(0),N=Nactive+Ncontrol,Nactive=Nactive,Ncontrol=Ncontrol,Ratio=Nactive/Ncontrol,Length=0)
+  new("RCurve",type="InstantR",PDF="NULL",CDF="instant_recruit",RF="instant_sim",inverse="NULL",paramno=1,pnames="Dummy",pvalue=list(0),N=Nactive+Ncontrol,Nactive=Nactive,Ncontrol=Ncontrol,Ratio=Nactive/Ncontrol,Length=0)
 }
 
 #' PieceR RCurve constructor function
@@ -259,7 +258,7 @@ InstantR <- function(Nactive,Ncontrol){
 #' RCurve objects contain all necessary information to describe a recruitment distribution. They are a particular type of Curve object containing additional recruitment-related information, including patient numbers and the randomisation ratio.\cr
 #' @param recruitment 2-column matrix with recruitment parameters. First column gives the lengths of each period of recruitment. Second column gives the corresponding rates of recruitment for each period.
 #' @param ratio Randomisation ratio; active arm divided by control arm.
-#' @details This RCurve is used when it is expected that patients enter a trial at a constant rate until the required number is achieved.
+#' @details This RCurve is used when it is expected that patients enter a trial at a rate that varies over time.
 #' @author James Bell
 #' @examples
 #' rmatrix <- matrix(c(rep(4,3),5,10,15),ncol=2)
@@ -272,5 +271,29 @@ PieceR <- function(recruitment,ratio){
   N <- sum(rates*lengths)
   Nactive <- N*(ratio/(ratio+1))
   Ncontrol <- N-Nactive
-  new("RCurve",type="PieceR",PDF="piece_recruitPDF",CDF="piece_recruit",RF="piece_sim",paramno=2,pnames=c("lengths","rates"),pvalue=list(lengths,rates),N=N,Ratio=ratio,Nactive=Nactive,Ncontrol=Ncontrol,Length=sum(lengths))
+  new("RCurve",type="PieceR",PDF="piece_recruitPDF",CDF="piece_recruit",RF="piece_sim",inverse="NULL",paramno=2,pnames=c("lengths","rates"),pvalue=list(lengths,rates),N=N,Ratio=ratio,Nactive=Nactive,Ncontrol=Ncontrol,Length=sum(lengths))
 }
+
+#' PieceR RCurve constructor function
+#'
+#' This creates a RCurve object for a piecewise-linear recruitment distribution with a fixed (maximum) per-patient follow-up time.\cr
+#' RCurve objects contain all necessary information to describe a recruitment distribution. They are a particular type of Curve object containing additional recruitment-related information, including patient numbers and the randomisation ratio.\cr
+#' @param recruitment 2-column matrix with recruitment parameters. First column gives the lengths of each period of recruitment. Second column gives the corresponding rates of recruitment for each period.
+#' @param ratio Randomisation ratio; active arm divided by control arm.
+#' @param maxF Fixed follow-up time per patient, i.e. maximum time a patient will be at risk independent of length of study. 
+#' @details This RCurve is used when it is expected that patients enter a trial at a rate that varies over time and there is a fixed maximum follow-up time per patient.
+#' @author James Bell
+#' @examples
+#' rmatrix <- matrix(c(rep(4,3),5,10,15),ncol=2)
+#' rmatrix
+#' PieceRMaxF(recruitment=rmatrix,ratio=1,maxF=12)
+#' @export
+PieceRMaxF <- function(recruitment,ratio,maxF){
+  lengths <- recruitment[,1]
+  rates <- recruitment[,2]
+  N <- sum(rates*lengths)
+  Nactive <- N*(ratio/(ratio+1))
+  Ncontrol <- N-Nactive
+  new("RCurve",type="PieceR",PDF="piece_recruitPDFMaxF",CDF="piece_recruitMaxF",RF="piece_simMaxF",inverse="NULL",paramno=3,pnames=c("lengths","rates","maxF"),pvalue=list(lengths,rates,maxF),N=N,Ratio=ratio,Nactive=Nactive,Ncontrol=Ncontrol,Length=sum(lengths))
+}
+

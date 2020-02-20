@@ -4,11 +4,15 @@
 \alias{set_assess_time}
 \title{Adjusts assessment time for simulations}
 \usage{
-set_assess_time(data, time, output_type = c("input", "matrix", "list"),
-  detailed_output = TRUE)
+set_assess_time(
+  data,
+  time,
+  output_type = c("input", "matrix", "list"),
+  detailed_output = TRUE
+)
 }
 \arguments{
-\item{data}{Output file from simulate_trials. Only simulate_trials output is supported.}
+\item{data}{Output file from simulate_trials() or simulate_trials_strata() in either "list" or "matrix" format. Only these formats are supported.}
 
 \item{time}{Positive number specifying the required assessment time.}
 
@@ -20,10 +24,10 @@ set_assess_time(data, time, output_type = c("input", "matrix", "list"),
 Returns the input simulated trial, in either matrix or list format, with modified assessment times. All columns dependent on this are also updated.
 }
 \description{
-Function for modifying the assessment time of a simulate_trials simulation.\cr
-Set up to automatically read in either matrix or list formats from simulate_trials, and only these inputs are supported.\cr
-Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.\cr
-It is strongly recommended to initially simulate for at least the duration of the recruitment before reducing the number to missing patients.\cr
+Function for modifying the assessment time of simulate_trials() or simulate_trials_strata() simulations.\cr
+It is set up to automatically read in either matrix or list formats from simulate_trials() or simulate_trials_strata(), and only these inputs are supported.\cr
+Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.
+It is therefore strongly recommended to initially simulate for at least the duration of the recruitment before reducing the number to missing patients.\cr
 This function can also be used to change format and/or slim down data for time-driven simulations.\cr
 }
 \examples{

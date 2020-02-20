@@ -4,8 +4,15 @@
 \alias{frontierpower}
 \title{Calculate Frontier power from number of events}
 \usage{
-frontierpower(events, HR, Eratio, Rratio = 1, startpower = 0.5,
-  alpha1 = 0.025, iter = 10)
+frontierpower(
+  events,
+  HR,
+  Eratio,
+  Rratio = 1,
+  startpower = 0.5,
+  alpha1 = 0.025,
+  iter = 10
+)
 }
 \arguments{
 \item{events}{Number of events.}

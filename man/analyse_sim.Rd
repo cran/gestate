@@ -4,15 +4,21 @@
 \alias{analyse_sim}
 \title{Analyse simulations of time-to-event data using arbitrary event, censoring and recruitment distributions.}
 \usage{
-analyse_sim(data, LR = TRUE, RMST = NULL, landmark = NULL,
-  stratum = "", parallel_cores = 1)
+analyse_sim(
+  data,
+  LR = TRUE,
+  RMST = NA,
+  landmark = NA,
+  stratum = "",
+  parallel_cores = 1
+)
 }
 \arguments{
-\item{data}{Output file from simulate_trials. Only simulate_trials output is supported, in either "list" or "matrix" format.}
+\item{data}{Output file from simulate_trials(). Only simulate_trials() or simulate_trials_strata() output is supported, in either "list" or "matrix" format.}
 
 \item{LR}{Requests log-rank test and Cox regression. Default=TRUE}
 
-\item{RMST}{Requests Restricted Mean Survival Time analysis with specified (positive integer) restriction time, leave NULL for no analysis. This uses the survRM2 package. Default=NULL (no RMST analysis).}
+\item{RMST}{Requests Restricted Mean Survival Time analysis with specified (positive integer) restriction time, leave NULL for no analysis. Default=NULL (no RMST analysis).}
 
 \item{landmark}{Requests Landmark analysis at specified (positive integer) time, leave NULL for no analysis. Default=NULL (no landmark analysis).}
 
@@ -53,26 +59,36 @@ Returns a table with one row per simulation. Table contains the following column
 }
 }
 \description{
-Function for analysing simulated time-to-event trial data produced by simulate_trials.\cr
-Automatically reads in format from simulate_trials.\cr
-Performs log rank test and Cox regression analysis by default, but can also/instead choose RMST and/or landmark analyses.\cr
-Option is available to perform stratified analysis using the "stratum" argument.\cr
+Function for analysing simulated time-to-event trial data produced by simulate_trials() or simulate_trials_strata().\cr
+This function automatically reads in either list or matrix simulate_trials() data formats.
+It performs log rank test and Cox regression analysis by default, but can also/instead perform RMST and/or landmark analyses.
+Covariate adjusted (/ stratified) analysis may be selected by using the "stratum" argument.
 If a stratum is specified, it will be included as a covariate in Cox and RMST analysis, and as a stratum in a stratified log-rank test and an inverse-precision-weighted landmark test.
-Analysis is typically the slowest part of simulation, so parallel processing using the doParallel package is built in, enabled using the "parallel" argument.\cr
-Use of parallel processing recommended for >10000 simulations. Ensure that the number of cores specified does not exceed number of threads provided by hardware.
+Strata values are handled as factors, so continuous covariates are not supported.\cr
+Analysis is typically the slowest part of simulation studies, so parallel processing using the doParallel package is built in.
+Parallel processing is enabled by setting the number of cores in the "parallel_cores" argument.
+Use of parallel processing is recommended for largescale (e.g. 100,000 iteration) simulations. 
+To avoid unnecessary issues, ensure that the number of cores specified does not exceed number of threads provided by hardware.
 }
 \examples{
 example_sim <- simulate_trials(active_ecurve=Weibull(250,0.8),control_ecurve=Weibull(100,1),
-rcurve=LinearR(12,100,100), assess=20,iterations=2,seed=12345,detailed_output=TRUE)
+rcurve=LinearR(12,100,100), assess=20,iterations=100,seed=12345,detailed_output=TRUE)
 
 example_analysis1 <- analyse_sim(example_sim)
 example_analysis2 <- analyse_sim(data=example_sim,RMST=15,landmark=15)
 
 example_strat_sim <- simulate_trials_strata(stratum_probs=c(0.5,0.5),
 active_ecurve=c(Weibull(250,0.8),Weibull(100,1)), control_ecurve=Weibull(100,1),
-rcurve=LinearR(12,100,100),assess=20,iterations=2,seed=12345)
+rcurve=LinearR(12,100,100),assess=20,iterations=100,seed=12345)
 
 example_strat_analysis <- analyse_sim(data=example_strat_sim,RMST=15,landmark=15,stratum="Stratum")
+}
+\references{
+Uno H, Claggett B, Tian L, Inoue E, Gallo P, Miyata T, Schrag D, Takeuchi M, Uyama Y, Zhao L,
+  Skali H, Solomon S, Jacobus S, Hughes M, Packer M, Wei LJ. Moving beyond the hazard ratio in
+  quantifying the between-group difference in survival analysis. Journal of clinical Oncology 2014,32, 2380-2385.
+Tian L, Zhao L, Wei LJ. Predicting the restricted mean event time with the subjects baseline covariates in survival analysis. 
+  Biostatistics 2014, 15, 222-233.
 }
 \author{
 James Bell

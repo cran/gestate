@@ -7,7 +7,7 @@
 summarise_analysis(analysed_results, alpha1 = 0.025)
 }
 \arguments{
-\item{analysed_results}{Output file from analyse_sim. Only analyse_sim output is supported.}
+\item{analysed_results}{Output file from analyse_sim(). Only analyse_sim() output is supported.}
 
 \item{alpha1}{1-sided alpha to be used for analysis. Default=0.025.}
 }
@@ -50,9 +50,9 @@ Returns a table with one row. Table contains the following columns:
 }
 }
 \description{
-Function for summarising the analyses of simulated time-to-event trial data produced by analyse_sim.\cr
-Automatically reads in format from analyse_sim; no other input format is supported.\cr
-Automatically detects types of analysis performed and provides relevant summaries (log-rank, Cox, RMST, landmark).\cr
+Function for summarising the analyses of simulated time-to-event trial data produced by analyse_sim().\cr
+Automatically reads in format from analyse_sim(); no other input format is supported.\cr
+It automatically detects types of analysis performed and provides relevant summaries (log-rank, Cox, RMST, landmark).\cr
 }
 \examples{
 example_sim <- simulate_trials(active_ecurve=Weibull(250,0.8),control_ecurve=Weibull(100,1),

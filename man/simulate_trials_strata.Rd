@@ -4,11 +4,21 @@
 \alias{simulate_trials_strata}
 \title{Perform multi-strata simulations of time-to-event data using arbitrary event, censoring and recruitment distributions.}
 \usage{
-simulate_trials_strata(stratum_probs, active_ecurve, control_ecurve,
-  active_dcurve = Blank(), control_dcurve = Blank(), rcurve,
-  assess = NULL, fix_events = NULL, stratum_name = "Stratum",
-  iterations, seed, detailed_output = FALSE, output_type = c("matrix",
-  "list"))
+simulate_trials_strata(
+  stratum_probs,
+  active_ecurve,
+  control_ecurve,
+  active_dcurve = Blank(),
+  control_dcurve = Blank(),
+  rcurve,
+  assess = NULL,
+  fix_events = NULL,
+  stratum_name = "Stratum",
+  iterations,
+  seed,
+  detailed_output = FALSE,
+  output_type = c("matrix", "list")
+)
 }
 \arguments{
 \item{stratum_probs}{Vector of probabilities that patients belong to each stratum. Must sum to 1. Its length determines the number of strata.}
@@ -17,9 +27,9 @@ simulate_trials_strata(stratum_probs, active_ecurve, control_ecurve,
 
 \item{control_ecurve}{List of event distributions for the control arm, specified as a list of Curve objects. If single Curve is specified, will be used for all strata.}
 
-\item{active_dcurve}{List of dropout/censoring distribution for the active arm, specified as a Curve object. If single Curve is specified, will be used for all strata. By default, a Blank() object, i.e. no dropout in any stratum.}
+\item{active_dcurve}{List of dropout/censoring distribution for the active arm, specified as a Curve object. If single Curve is specified, will be used for all strata. By default, Blank(), i.e. no dropout in any stratum.}
 
-\item{control_dcurve}{List of dropout/censoring distribution for the control arm, specified as a Curve object. If single Curve is specified, will be used for all strata. By default, a Blank() object, i.e. no dropout in any stratum.}
+\item{control_dcurve}{List of dropout/censoring distribution for the control arm, specified as a Curve object. If single Curve is specified, will be used for all strata. By default, Blank(), i.e. no dropout in any stratum.}
 
 \item{rcurve}{Recruitment distribution, specified as a single RCurve object.}
 
@@ -29,7 +39,7 @@ simulate_trials_strata(stratum_probs, active_ecurve, control_ecurve,
 
 \item{stratum_name}{Name of the column defining the stratum. Default="Stratum".}
 
-\item{iterations}{Number of simulations to perform. Depending on trial size, 10,000-20,000 is typically OK to analyse on a laptop. 100,000 typically requires a system with more RAM.}
+\item{iterations}{Number of simulations to perform. Depending on trial size, 10,000-20,000 is typically OK to analyse on 8GB RAM.}
 
 \item{seed}{Seed number to use. Numerical, although if "Rand" is specified, a system-time-derived number will be used.}
 
@@ -56,8 +66,8 @@ Returns a table with one row per patient per simulation. Table contains the foll
 Function for simulating generalised two-arm multi-strata time-to-event trial data for NPH trials with arbitrary event, censoring and recruitment distributions.\cr
 Acts as a wrapper for simulate_trials.\cr
 Vector of strata proportions supplies number of strata. Event and censoring distributions specified via lists of Curve objects. If only one Curve supplied then assumed to be common to all strata. Recruitment specified via a single RCurve object.\cr
-As it uses same architecture and similar syntax to nph_curve_trajectories, results ought to be directly comparable to e.g. use of MixExp or MixWei distributions.\cr
-Can be used to validate outputs from nph_curve_trajectories.\cr
+As it uses same architecture and similar syntax to nph_traj(), results in simple cases may be directly comparable to e.g. use of MixExp() or MixWei() Curves.\cr
+Can be used to validate outputs from nph_traj().\cr
 Data sets from this are set up to be automatically analysed with the analyse_sim function (including stratified analysis if you provide it the name of stratum column).\cr
 }
 \examples{

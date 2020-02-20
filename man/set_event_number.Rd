@@ -4,11 +4,15 @@
 \alias{set_event_number}
 \title{Adjusts simulations so that administrative censoring occurs at a fixed event number, rather than a fixed time}
 \usage{
-set_event_number(data, events, output_type = c("input", "matrix",
-  "list"), detailed_output = TRUE)
+set_event_number(
+  data,
+  events,
+  output_type = c("input", "matrix", "list"),
+  detailed_output = TRUE
+)
 }
 \arguments{
-\item{data}{Output file from simulate_trials. Only simulate_trials output is supported.}
+\item{data}{Output file from simulate_trials() or simulate_trials_strata() in either "list" or "matrix" format. Only these formats are supported.}
 
 \item{events}{Positive integer specifying the required number of events.}
 
@@ -20,10 +24,10 @@ set_event_number(data, events, output_type = c("input", "matrix",
 Returns the input simulated trial, in either matrix or list format, with modified assessment times. All columns dependent on this are also updated.
 }
 \description{
-Function for converting trials simulated under simulate_trials from a fixed censoring time to a fixed number of total events.\cr
-Set up to automatically read in either matrix or list formats from simulate_trials, and only these inputs are supported.\cr
-Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.\cr
-It is strongly recommended to initially simulate for at least the duration of the recruitment before fixing the event number.\cr
+Function for converting trials simulated by simulate_trials() or simulate_trials_strata() from a fixed censoring time to a fixed number of total events.\cr
+It is set up to automatically read in either matrix or list formats from simulate_trials() or simulate_trials_strata(), and only these inputs are supported.\cr
+Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.
+It is therefore strongly recommended to initially simulate for at least the duration of the recruitment before fixing the event number.\cr
 This function can also be used to change format and/or slim down data for event-driven simulations.\cr
 }
 \examples{

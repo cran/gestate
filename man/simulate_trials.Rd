@@ -4,19 +4,28 @@
 \alias{simulate_trials}
 \title{Perform simulations of time-to-event data using arbitrary event, censoring and recruitment distributions.}
 \usage{
-simulate_trials(active_ecurve, control_ecurve, active_dcurve = Blank(),
-  control_dcurve = Blank(), rcurve, assess = NULL, fix_events = NULL,
-  iterations, seed, detailed_output = FALSE, output_type = c("matrix",
-  "list"))
+simulate_trials(
+  active_ecurve,
+  control_ecurve,
+  active_dcurve = Blank(),
+  control_dcurve = Blank(),
+  rcurve,
+  assess = NULL,
+  fix_events = NULL,
+  iterations,
+  seed,
+  detailed_output = FALSE,
+  output_type = c("matrix", "list")
+)
 }
 \arguments{
 \item{active_ecurve}{Event distribution for the active arm, specified as a Curve object}
 
 \item{control_ecurve}{Event distribution for the control arm, specified as a Curve object}
 
-\item{active_dcurve}{Dropout/censoring distribution for the active arm, specified as a Curve object. By default, a Blank() object, i.e. no dropout.}
+\item{active_dcurve}{Dropout/censoring distribution for the active arm, specified as a Curve object. By default, Blank(), i.e. no dropout.}
 
-\item{control_dcurve}{Dropout/censoring distribution for the control arm, specified as a Curve object. By default, a Blank() object, i.e. no dropout.}
+\item{control_dcurve}{Dropout/censoring distribution for the control arm, specified as a Curve object. By default, Blank(), i.e. no dropout.}
 
 \item{rcurve}{Recruitment distribution, specified as an RCurve object}
 
@@ -48,10 +57,11 @@ Returns a table with one row per patient per simulation. Table contains the foll
 }
 \description{
 Function for simulating generalised two-arm time-to-event trial data for NPH trials with arbitrary event, censoring and recruitment distributions.\cr
-Event and censoring distributions specified via Curve objects. Recruitment specified via an RCurve object.
-As it uses same architecture and similar syntax to nph_curve_trajectories, results ought to be directly comparable.\cr
-Can be used to validate outputs from nph_curve_trajectories.\cr
-Data sets from this are set up to be automatically analysed with the analyse_sim function.\cr
+Event and censoring distributions are specified via Curve objects, with recruitment specified through an RCurve object.
+As it uses same architecture and similar syntax to nph_traj(), analysis results ought to be directly comparable.
+It is designed to complement nph_traj(), either as a stochastic alternative, or as a means to validate its outputs. 
+It can also be used to build more complex simulations by combining the outputs of multiple runs; e.g. multi-arm trials.\cr
+Data sets created by this function are formatted so they may be automatically recognised and analysed by analyse_sim().\cr
 }
 \examples{
 example_sim <- simulate_trials(active_ecurve=Weibull(250,0.8),control_ecurve=Weibull(100,1),

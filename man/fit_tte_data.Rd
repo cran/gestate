@@ -2,11 +2,16 @@
 % Please edit documentation in R/event_prediction.R
 \name{fit_tte_data}
 \alias{fit_tte_data}
-\title{Fit Weibull and Log-Normal survival curves to patient-level time-to-event data}
+\title{Fit Weibull, Log-Normal or Exponential survival curves to patient-level time-to-event data}
 \usage{
-fit_tte_data(data, Time = "Time", Event = "Event",
-  censoringOne = FALSE, type = c("automatic", "Weibull", "Lognormal"),
-  init = NULL)
+fit_tte_data(
+  data,
+  Time = "Time",
+  Event = "Event",
+  censoringOne = FALSE,
+  type = c("automatic", "Weibull", "Lognormal", "Exponential"),
+  init = NULL
+)
 }
 \arguments{
 \item{data}{The dataframe object containing the patient-level survival data}

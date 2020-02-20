@@ -41,6 +41,9 @@ test_that("S4 architecture and constructors working as intended", {
   expect_equal(unname(getParam(i,param=2)), 1.1)
   expect_equal(getPatients(j,x=0.00000001), getPatients(j,x=100000000))
   expect_equal(evaluateCDFfunction(l,10), evaluateCDFfunction(m,10))
+  expect_equal(evaluateInvfunction(l, evaluateCDFfunction(l,10)),tolerance=0.001,10)
+  expect_equal(evaluateInvfunction(m, evaluateCDFfunction(m,20)),tolerance=0.001,20)
+  expect_equal(evaluateInvfunction(g, evaluateCDFfunction(g,4)),tolerance=0.001,4)
 })
 
 context("Power Tests")
@@ -100,8 +103,10 @@ ccc <- analyse_sim(cc,landmark=10)
 ccd <- analyse_sim(cc,RMST=10,landmark=10)
 eee <- analyse_sim(ee,LR=FALSE,RMST=10)
 jjj <- analyse_sim(jj,landmark=20,stratum="Stratum")
+kkk <- analyse_sim(jj,LR=FALSE,RMST=20,stratum="Stratum")
 cccc <- summarise_analysis(ccc)
 eeee <- summarise_analysis(eee)
+kkkk <- summarise_analysis(kkk)
 
 context("trial simulation structural testing")
 test_that("simulate_trials is generating correctly-formatted output", {
@@ -165,6 +170,7 @@ context("Simulation analysis numerical testing")
 test_that("numbers come out as expected", {
   expect_equal(as.numeric(cccc),tolerance=0.001,c(10,0.7609,-0.2733,0.25545,-1.0112,0.156,0.2,0,-1.0291,0.1517,0.2,0,22.2,56.2,78.4,10,0.881,0.0322,0.874,0.0234,0.007,0.0398,0.2,0))
   expect_equal(as.numeric(eeee),tolerance=0.001,c(10,10,9.3828,0.1931,9.4286,0.1253,-0.0458,0.2301,0.1,0))
+  expect_equal(as.numeric(kkkk),tolerance=0.001,c(10,20,17.983,0.438,17.396,0.366,0.5874,0.5708,0.2,0))
 })
 
 context("Loading examples 4")
@@ -179,11 +185,8 @@ fit2a <- fit_tte_data(ep,Event="Censored",censoringOne=TRUE,type="Weibull")
 fit2b <- fit_tte_data(ep,Time="Time",Event="Censored",censoringOne=TRUE)
 fit2c <- fit_tte_data(ep,Event="Censored",censoringOne=TRUE,type="Lognormal")
 
-predict1a <- event_prediction_KM(KMcurve=lt,type="W",rcurve=f,max_time=100,discountHR=0.8,condition=TRUE,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
-predict1c <- event_prediction_KM(KMcurve=lt,type="L",rcurve=f,max_time=100,condition=TRUE,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
-
-predict2a <- event_prediction(data=ep,Event="Censored",censoringOne=TRUE,type="W",rcurve=f,max_time=100,discountHR=0.8,condition=TRUE,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
-predict2b <- event_prediction(data=ep,Event="Censored",censoringOne=TRUE,rcurve=f,max_time=100,condition=TRUE,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
+predict2a <- event_prediction(data=ep,Event="Censored",censoringOne=TRUE,type="W",rcurve=f,max_time=100,discountHR=0.8,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
+predict2b <- event_prediction(data=ep,Event="Censored",censoringOne=TRUE,rcurve=f,max_time=100,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
 
 context("Curve fitting testing")
 test_that("Curve fit outputs are correct", {
@@ -200,33 +203,20 @@ test_that("Curve fit outputs are correct", {
   expect_equal(as.numeric(fit1c$Parameters),tolerance=0.000001,c(5.211939,2.187701))
   expect_equal(as.numeric(fit2a$Parameters),tolerance=0.000001,c(119.4294831,0.9492834))
   expect_equal(as.numeric(fit2c$Parameters),tolerance=0.000001,c(5.052680,2.156809))
-  expect_equal(as.numeric(fit1b$VCov),tolerance=0.0001,c(102.3088,0.0006274441,-0.2489189))
-  expect_equal(as.numeric(fit1c$VCov),tolerance=0.000001,c(0.008563819,0.006136131,0.007129209))
   expect_equal(as.numeric(fit2a$VCov),tolerance=0.000001,c(913.66525215,0.01456038,-3.05446988))
   expect_equal(as.numeric(fit2c$VCov),tolerance=0.000001,c(0.09259047,0.05473513,0.05859155))
 })
 
 context("event prediction testing")
-test_that("event_prediction_km is working properly", {
-  expect_true(is.list(predict1a))
-  expect_named(predict1a,c("ecurve","dcurve","rcurve","Fitted","Summary"))
-  expect_s4_class(predict1a$ecurve,"Curve")
-  expect_s4_class(predict1a$dcurve,"Curve")
-  expect_s4_class(predict1a$rcurve,"RCurve")
-  expect_true(is.data.frame(predict1a$Summary))
-  expect_named(predict1a$Summary,c("Time","Patients","Predicted_Events","Conditioned_Events"))
-  expect_equal(as.numeric(predict1a$Summary[50,]),tolerance=0.001,c(50,300,83.972,102.512))
-  expect_equal(as.numeric(predict1c$Summary[50,]),tolerance=0.001,c(50,300,90.115,100.452))
-})
 
-test_that("event_prediction_data is working properly", {
+test_that("event_prediction is working properly", {
   expect_true(is.list(predict2a))
-  expect_named(predict2a,c("ecurve","dcurve","rcurve","CI","Fitted","Summary"))
+  expect_named(predict2a,c("ecurve","dcurve","rcurve","PI","Fitted","Summary"))
   expect_s4_class(predict2a$ecurve,"Curve")
   expect_s4_class(predict2a$dcurve,"Curve")
   expect_s4_class(predict2a$rcurve,"RCurve")
   expect_true(is.data.frame(predict2a$Summary))
   expect_named(predict2a$Summary,c("Time","Patients","Predicted_Events","SE_Fitting","SE_Prediction","Prediction_Lower","Prediction_Upper","Conditioned_Events","Cond_SE_Fitting","Cond_SE_Prediction","Cond_Prediction_Lower","Cond_Prediction_Upper"))
-  expect_equal(as.numeric(predict2a$Summary[50,]),tolerance=0.001,c(50,300,79.906,9.6301,12.2904,57,105,99.187,5.3414,7.3410,86,115))
+  expect_equal(as.numeric(predict2a$Summary[50,]),tolerance=0.001,c(50,300,79.906,9.6301,12.2904,57,105,86.96,5.67,7.68,73,103))
   expect_equal(as.numeric(predict2b$Summary[50,]),tolerance=0.001,c(50,300,96.288,12.1419,14.5712,69,126,105.887,7.1687,9.0252,90,125))
 })

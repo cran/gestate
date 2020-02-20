@@ -20,6 +20,8 @@ Parameters are also stored.
 
 \item{\code{RF}}{Name of the random generator function describing the Curve.}
 
+\item{\code{inverse}}{Name of the inverse CDF function describing the Curve. Optional; set to NULL if unavailable.}
+
 \item{\code{paramno}}{Number of parameters required to define the distribution.}
 
 \item{\code{pnames}}{Names of parameters defining the distribution. Should be a vector of length paramno.}
@@ -28,8 +30,9 @@ Parameters are also stored.
 }}
 
 \examples{
-new("Curve", type="ExampleCurve",PDF="name_of_pdf_function",CDF="name_of_CDF_function",
-RF="name_of_random_draw_function", paramno=2,pnames=c('param1','param2'),pvalue=list(1,2))
+new("Curve", type="ExampleCurve",PDF="pdf_fn_name",CDF="CDF_fn_name",
+  RF="random_draw_fn_name", inverse="inv_fn_name",paramno=2,pnames=c('param1','param2'),
+  pvalue=list(1,2))
 }
 \author{
 James Bell

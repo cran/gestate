@@ -4,21 +4,28 @@
 \alias{plot_ep}
 \title{Plot event prediction output}
 \usage{
-plot_ep(data, trajectory = c("both", "conditional", "unconditional"),
-  which_CI = c("both", "conditional", "unconditional", "none"),
-  prediction_fitting = c("prediction", "fitting"), observed = NULL,
-  target = NULL, max_time = NULL, max_E = NULL,
-  legend_position = c("top_left", "bottom_right"), no_legend = FALSE,
-  ...)
+plot_ep(
+  data,
+  trajectory = c("both", "conditional", "unconditional"),
+  which_PI = c("both", "conditional", "unconditional", "none"),
+  prediction_fitting = c("prediction", "fitting"),
+  observed = NULL,
+  target = NULL,
+  max_time = NULL,
+  max_E = NULL,
+  legend_position = c("top_left", "bottom_right"),
+  no_legend = FALSE,
+  ...
+)
 }
 \arguments{
-\item{data}{Full output list from event_prediction or event_prediction_KM.}
+\item{data}{Full output list from event_prediction().}
 
 \item{trajectory}{String, choice of "both","conditional","unconditional", for which trajectory to plot. (Default="both")}
 
-\item{which_CI}{String, choice of "both","conditional","unconditional","none", for which CIs to plot. (Default="both")}
+\item{which_PI}{String, choice of "both","conditional","unconditional","none", for which PIs to plot. (Default="both")}
 
-\item{prediction_fitting}{String, choice of "prediction" or "fitting" (Default = "prediction"). Determines the nature of the CIs; Prediction CIs are relevant for prediction of the observation of future trajectories (sample level), whereas fitting CIs concern the interval for the mean trajectory itself (population level).}
+\item{prediction_fitting}{String, choice of "prediction" or "fitting" (Default = "prediction"). Determines the nature of the intervals; PIs are relevant for prediction of the observation of future trajectories (sample level), whereas fitting CIs concern the interval for the mean trajectory itself (population level).}
 
 \item{observed}{Optional trajectory of observed event numbers. If vector specified, will plot values at integer times starting from 1. If 2-column matrix specified, will take x-values from column 1 and y-values from column 2. (Default=NULL; not plotted).}
 
@@ -38,9 +45,9 @@ plot_ep(data, trajectory = c("both", "conditional", "unconditional"),
 Returns NULL
 }
 \description{
-This function plots the output from event_prediction and event_prediction_KM.\cr
+This function plots the output from event_prediction().\cr
 By default, produces a plot of predicted events over time, with confidence intervals if available.\cr
-Alternatively, produces a plot with the fitting CI over time with same percentage as prediction CI.\cr
+Alternatively, produces a plot with the fitting CI over time with same percentage as prediction interval.\cr
 By default, both conditional and unconditional trajectories are plotted (if conditional event prediction is available).\cr
 Options are available to customise inclusion.\cr
 }
@@ -55,16 +62,16 @@ events <- rep(NA,maxtime)
 for (i in 1:maxtime){events[i] <- sum(1-set_assess_time(trial_long,i)[,"Censored"])}
 
 predictions <- event_prediction(data=trial_short, Event="Censored", censoringOne=TRUE, 
-type="Weibull", rcurve=recruit, max_time=60, condition=TRUE, cond_Events=49, cond_NatRisk=451, 
+type="Weibull", rcurve=recruit, max_time=60, cond_Events=49, cond_NatRisk=451, 
 cond_Time=10, units="Months")
 
-plot_ep(predictions,trajectory="conditional",which_CI="conditional",max_time=40,observed=events,
+plot_ep(predictions,trajectory="conditional",which_PI="conditional",max_time=40,observed=events,
 target=200,max_E=200)
 
-plot_ep(predictions,trajectory="unconditional",which_CI="unconditional",max_time=40,
+plot_ep(predictions,trajectory="unconditional",which_PI="unconditional",max_time=40,
 observed=events,target=200,max_E=200)
 
-plot_ep(predictions,trajectory="conditional",which_CI="none",observed=events[1:10],max_time=20,
+plot_ep(predictions,trajectory="conditional",which_PI="none",observed=events[1:10],max_time=20,
 max_E=150)
 
 }

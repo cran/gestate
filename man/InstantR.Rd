@@ -7,9 +7,9 @@
 InstantR(Nactive, Ncontrol)
 }
 \arguments{
-\item{Nactive}{Number of patients recruited in active arm.}
+\item{Nactive}{Number of patients recruited in the active arm.}
 
-\item{Ncontrol}{Number of patients recruited in active arm.}
+\item{Ncontrol}{Number of patients recruited in the control arm.}
 }
 \description{
 This creates a RCurve object for an instant recruitment distribution.\cr

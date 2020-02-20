@@ -2,12 +2,21 @@
 % Please edit documentation in R/nph_traj.R
 \name{nph_traj}
 \alias{nph_traj}
-\title{Calculate analytic time-to-event trial properties under non-proportional hazards or other complex assumptions}
+\title{Calculate analytic time-to-event trial properties under non-proportional hazards and complex assumptions}
 \usage{
-nph_traj(active_ecurve, control_ecurve, active_dcurve = Blank(),
-  control_dcurve = Blank(), rcurve, max_assessment = 100,
-  landmark = NULL, RMST = NULL, alpha1 = 0.025,
-  required_power = NULL, detailed_output = FALSE)
+nph_traj(
+  active_ecurve,
+  control_ecurve,
+  active_dcurve = Blank(),
+  control_dcurve = Blank(),
+  rcurve,
+  max_assessment = 100,
+  landmark = NULL,
+  RMST = NULL,
+  alpha1 = 0.025,
+  required_power = NULL,
+  detailed_output = FALSE
+)
 }
 \arguments{
 \item{active_ecurve}{Event distribution for the active arm, specified as a Curve object}
@@ -91,15 +100,19 @@ If a required power is requested, the following column is included:
 }
 }
 \description{
-This function calculates the expected parameters/outputs/properties for a 2-arm Time-To-Event trial under complex assumptions.\cr
+This function calculates the expected parameters/outputs/properties for a two-arm Time-To-Event trial under complex assumptions.
 It is designed to work with non-proportional hazards and ought to be able to accommodate any distributional assumptions for
 events, censoring and recruitment, so long as they are correctly detailed in Curve or RCurve objects.\cr
-It performs power calculation and hence sample size planning. However, identifying the optimum assessment time is also key.\cr
-It uses numerical integration across event, censoring and recruitment functions to calculate expected observed and expected expected event numbers.\cr
-From these, it estimates an expected HR using the Pike method, with the same interpretation as that found using Cox regression.\cr
-The expected event numbers and HR can then be used in calculating power by one of several methods, including the Schoenfeld and Frontier methods.\cr
+The function performs power calculations and hence can be used for sample size planning. By creating trajectories of properties
+over time, the function also assists with identifying the optimum assessment time.\cr
+The function uses numerical integration across event, censoring and recruitment functions to estimate observed and expected event numbers.
+From these, it estimates an expected HR, with the same interpretation as that found using Cox regression, using the Pike method.
+The estimated event numbers and HR can be used to calculate power by one of several methods, including the Schoenfeld and Frontier methods.
 A separate, direct, power calculation can also be performed using the log-rank test formula and its Z-distribution.\cr
-To assist sample size finding, it will also estimate the required sample size to reach a given power keeping all variables other than recruitment.\cr
+To assist sample size finding, the function will also optionally estimate the required sample size to reach a given power 
+keeping all variables other than recruitment.\cr
+Expected RMST and landmark analysis properties may also be calculated. This also uses numerical integration techniques. 
+Power is also then estimated for such analyses.\cr
 }
 \examples{
 nph_traj(max_assessment=100,rcurve=LinearR(12,100,100),control_ecurve=Weibull(100,1),

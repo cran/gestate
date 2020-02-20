@@ -4,14 +4,15 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","
 #'Perform simulations of time-to-event data using arbitrary event, censoring and recruitment distributions.
 #'
 #' Function for simulating generalised two-arm time-to-event trial data for NPH trials with arbitrary event, censoring and recruitment distributions.\cr
-#' Event and censoring distributions specified via Curve objects. Recruitment specified via an RCurve object.
-#' As it uses same architecture and similar syntax to nph_curve_trajectories, results ought to be directly comparable.\cr
-#' Can be used to validate outputs from nph_curve_trajectories.\cr
-#' Data sets from this are set up to be automatically analysed with the analyse_sim function.\cr
+#' Event and censoring distributions are specified via Curve objects, with recruitment specified through an RCurve object.
+#' As it uses same architecture and similar syntax to nph_traj(), analysis results ought to be directly comparable.
+#' It is designed to complement nph_traj(), either as a stochastic alternative, or as a means to validate its outputs. 
+#' It can also be used to build more complex simulations by combining the outputs of multiple runs; e.g. multi-arm trials.\cr
+#' Data sets created by this function are formatted so they may be automatically recognised and analysed by analyse_sim().\cr
 #' @param active_ecurve Event distribution for the active arm, specified as a Curve object
 #' @param control_ecurve Event distribution for the control arm, specified as a Curve object
-#' @param active_dcurve Dropout/censoring distribution for the active arm, specified as a Curve object. By default, a Blank() object, i.e. no dropout.
-#' @param control_dcurve Dropout/censoring distribution for the control arm, specified as a Curve object. By default, a Blank() object, i.e. no dropout.
+#' @param active_dcurve Dropout/censoring distribution for the active arm, specified as a Curve object. By default, Blank(), i.e. no dropout.
+#' @param control_dcurve Dropout/censoring distribution for the control arm, specified as a Curve object. By default, Blank(), i.e. no dropout.
 #' @param rcurve Recruitment distribution, specified as an RCurve object
 #' @param assess Positive number for the assessment time at which administrative censoring will be performed.
 #' @param fix_events Positive integer for the number of events to fix (if required), letting the assessment time vary. Alternatively, NULL for fixed time assessment with variable event numbers. Notes: Fixing event numbers overrides any specified assessment time and slows simulation considerably. Default = NULL (fixed analysis time)
@@ -22,7 +23,6 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","
 #' @import survival
 #' @import foreach
 #' @importFrom doParallel registerDoParallel
-#' @importFrom survRM2 rmst2
 #' @return Returns a table with one row per patient per simulation. Table contains the following columns:
 #' \itemize{
 #'  \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis*}
@@ -81,33 +81,18 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
     seed <- as.numeric(Sys.time())
   }
   set.seed(seed)
-
-  # Write function for simulating events in the control arm
-  Econtrol_sim <- createRFfunction(control_ecurve)
-
-  # Write function for simulating events in the active arm
-  Eactive_sim <- createRFfunction(active_ecurve)
-
-  # Write function for simulating censorings in the control arm
-  Dcontrol_sim <- createRFfunction(control_dcurve)
-
-  # Write function for simulating censorings in the active arm
-  Dactive_sim <- createRFfunction(active_dcurve)
-
-  # Write function for simulating recruitment
-  R_sim <- createRFfunction(rcurve)
-
   columns <- 9
   nactive <- ceiling(getNactive(rcurve))
   ncontrol <- floor(getNcontrol(rcurve))
   n <- nactive+ncontrol
 
   if(nactive > 0){
-    activematrix <- matrix(rep(0,nactive*iterations*columns),nrow=nactive*iterations)
+    asize <- nactive*iterations
+    activematrix <- matrix(rep(0,asize*columns),nrow=asize)
     # Create events columns
-    activematrix[,5] <- Eactive_sim(nactive*iterations)
+    activematrix[,5] <- random_draw(active_ecurve,asize)
     # Create censoring columns
-    activematrix[,6] <- Dactive_sim(nactive*iterations)
+    activematrix[,6] <- random_draw(active_dcurve,asize)
     # Create treatment columns
     activematrix[,3] <- 2
     # Creates iterations columns
@@ -115,11 +100,12 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
   }
 
   if(ncontrol > 0){
-    controlmatrix <- matrix(rep(0,ncontrol*iterations*columns),nrow=ncontrol*iterations)
+    csize <- ncontrol*iterations
+    controlmatrix <- matrix(rep(0,csize*columns),nrow=csize)
     # Create events columns
-    controlmatrix[,5] <- Econtrol_sim(ncontrol*iterations)
+    controlmatrix[,5] <- random_draw(control_ecurve,csize)
     # Create censoring columns
-    controlmatrix[,6] <- Dcontrol_sim(ncontrol*iterations)
+    controlmatrix[,6] <- random_draw(control_dcurve,csize)
     # Create treatment columns
     controlmatrix[,3] <- 1
     # Creates iterations columns
@@ -133,7 +119,7 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
 
   # Create recruitment time
   colnames(output) <- c("Time","Censored","Trt","Iter","ETime", "CTime", "Rec_Time", "Assess", "RCTime")
-  output[,"Rec_Time"] <- R_sim(n*iterations)
+  output[,"Rec_Time"] <- random_draw(rcurve,n*iterations)
   output <- update_times_assess(output,assess)
   output <- output[output[,"RCTime"]>=0,]
   # This section handles event fixing and choice of output formatting
@@ -158,26 +144,25 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
 #' Function for simulating generalised two-arm multi-strata time-to-event trial data for NPH trials with arbitrary event, censoring and recruitment distributions.\cr
 #' Acts as a wrapper for simulate_trials.\cr
 #' Vector of strata proportions supplies number of strata. Event and censoring distributions specified via lists of Curve objects. If only one Curve supplied then assumed to be common to all strata. Recruitment specified via a single RCurve object.\cr
-#' As it uses same architecture and similar syntax to nph_curve_trajectories, results ought to be directly comparable to e.g. use of MixExp or MixWei distributions.\cr
-#' Can be used to validate outputs from nph_curve_trajectories.\cr
+#' As it uses same architecture and similar syntax to nph_traj(), results in simple cases may be directly comparable to e.g. use of MixExp() or MixWei() Curves.\cr
+#' Can be used to validate outputs from nph_traj().\cr
 #' Data sets from this are set up to be automatically analysed with the analyse_sim function (including stratified analysis if you provide it the name of stratum column).\cr
 #' @param stratum_probs Vector of probabilities that patients belong to each stratum. Must sum to 1. Its length determines the number of strata.
 #' @param active_ecurve List of event distributions for the active arm, specified as a list of Curve objects. If single Curve is specified, will be used for all strata.
 #' @param control_ecurve List of event distributions for the control arm, specified as a list of Curve objects. If single Curve is specified, will be used for all strata.
-#' @param active_dcurve List of dropout/censoring distribution for the active arm, specified as a Curve object. If single Curve is specified, will be used for all strata. By default, a Blank() object, i.e. no dropout in any stratum.
-#' @param control_dcurve List of dropout/censoring distribution for the control arm, specified as a Curve object. If single Curve is specified, will be used for all strata. By default, a Blank() object, i.e. no dropout in any stratum.
+#' @param active_dcurve List of dropout/censoring distribution for the active arm, specified as a Curve object. If single Curve is specified, will be used for all strata. By default, Blank(), i.e. no dropout in any stratum.
+#' @param control_dcurve List of dropout/censoring distribution for the control arm, specified as a Curve object. If single Curve is specified, will be used for all strata. By default, Blank(), i.e. no dropout in any stratum.
 #' @param rcurve Recruitment distribution, specified as a single RCurve object.
 #' @param assess Positive number for the assessment time at which administrative censoring will be performed.
 #' @param fix_events Positive integer for the number of events to fix (if required), letting the assessment time vary. Alternatively, NULL for fixed time assessment with variable event numbers. Notes: Fixing event numbers overrides any specified assessment time and slows simulation considerably. Default = NULL (fixed analysis time)
 #' @param stratum_name Name of the column defining the stratum. Default="Stratum".
-#' @param iterations Number of simulations to perform. Depending on trial size, 10,000-20,000 is typically OK to analyse on a laptop. 100,000 typically requires a system with more RAM.
+#' @param iterations Number of simulations to perform. Depending on trial size, 10,000-20,000 is typically OK to analyse on 8GB RAM.
 #' @param seed Seed number to use. Numerical, although if "Rand" is specified, a system-time-derived number will be used.
 #' @param detailed_output Boolean to require full details of timings of competing processes. If FALSE, the simplified data only includes the *'ed output columns - this approximately halves RAM requirements. Default=FALSE (simplified).
 #' @param output_type "matrix" or "list" specifying the type of output required. "matrix" requests a single matrix with a column "iter" to denote the simulation, while "list" creates a list with one entry per simulation. Default="matrix".
 #' @import survival
 #' @import foreach
 #' @importFrom doParallel registerDoParallel
-#' @importFrom survRM2 rmst2
 #' @return Returns a table with one row per patient per simulation. Table contains the following columns:
 #' \itemize{
 #'  \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis*}
@@ -223,7 +208,6 @@ simulate_trials_strata <- function(stratum_probs,active_ecurve,control_ecurve,ac
   #Boolean
   if(!is.logical(detailed_output))stop("Error: detailed_output argument must be boolean: default=FALSE (simplified output).")
 
-
   #String
   if(!is.character(stratum_name))stop("Error: stratum_name argument must be a string: default='Stratum'.")
 
@@ -266,6 +250,7 @@ simulate_trials_strata <- function(stratum_probs,active_ecurve,control_ecurve,ac
   output <- do.call(rbind,outlist)
 # Name stratum column, do event-fixing and output processing at this stage now data set is complete
   colnames(output)[which(colnames(output) == "temp")] <- stratum_name
+# Fix a set number of events if specified
   if(!is.null(fix_events)){
     output <- set_event_number(data=output,events=fix_events,output_type=output_type,detailed_output=detailed_output)
   } else {
@@ -294,12 +279,12 @@ update_times_assess <- function(data,assess){
 #######################################################################################################
 #'Adjusts simulations so that administrative censoring occurs at a fixed event number, rather than a fixed time
 #'
-#' Function for converting trials simulated under simulate_trials from a fixed censoring time to a fixed number of total events.\cr
-#' Set up to automatically read in either matrix or list formats from simulate_trials, and only these inputs are supported.\cr
-#' Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.\cr
-#' It is strongly recommended to initially simulate for at least the duration of the recruitment before fixing the event number.\cr
+#' Function for converting trials simulated by simulate_trials() or simulate_trials_strata() from a fixed censoring time to a fixed number of total events.\cr
+#' It is set up to automatically read in either matrix or list formats from simulate_trials() or simulate_trials_strata(), and only these inputs are supported.\cr
+#' Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.
+#' It is therefore strongly recommended to initially simulate for at least the duration of the recruitment before fixing the event number.\cr
 #' This function can also be used to change format and/or slim down data for event-driven simulations.\cr
-#' @param data Output file from simulate_trials. Only simulate_trials output is supported.
+#' @param data Output file from simulate_trials() or simulate_trials_strata() in either "list" or "matrix" format. Only these formats are supported.
 #' @param events Positive integer specifying the required number of events.
 #' @param output_type Choice of "input" (output in same format as input),"matrix" (matrix format output) or "list" (list format output). Default="input".
 #' @param detailed_output Boolean to require full details of timings of competing processes. If FALSE, the simplified data only includes the *'ed output columns - this approximately halves RAM requirements. Default=TRUE (detailed).
@@ -357,7 +342,7 @@ set_event_number <- function(data,events,output_type=c("input","matrix","list"),
     sortE <- length(sorted)
     if(sortE <= events){
       cutoff <- sorted[sortE]+0.0001
-      warning("Only",sortE,"events are possible in simulation",i,"but",events,"have been requested. Setting assessment time to just after last event.\n")
+      warning("Only",sortE,"events are possible in simulation",i,"but ",events," have been requested. Setting assessment time to just after last event.\n")
     }else{cutoff <- sorted[events]+(sorted[events+1]-sorted[events])/1000}
     newassess[i] <- mean(iterdata[,"Assess"]) + cutoff
     iterdata <- update_times_assess(data=iterdata,assess=(newassess[i]))
@@ -385,12 +370,12 @@ set_event_number <- function(data,events,output_type=c("input","matrix","list"),
 #######################################################################################################
 #'Adjusts assessment time for simulations
 #'
-#' Function for modifying the assessment time of a simulate_trials simulation.\cr
-#' Set up to automatically read in either matrix or list formats from simulate_trials, and only these inputs are supported.\cr
-#' Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.\cr
-#' It is strongly recommended to initially simulate for at least the duration of the recruitment before reducing the number to missing patients.\cr
+#' Function for modifying the assessment time of simulate_trials() or simulate_trials_strata() simulations.\cr
+#' It is set up to automatically read in either matrix or list formats from simulate_trials() or simulate_trials_strata(), and only these inputs are supported.\cr
+#' Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.
+#' It is therefore strongly recommended to initially simulate for at least the duration of the recruitment before reducing the number to missing patients.\cr
 #' This function can also be used to change format and/or slim down data for time-driven simulations.\cr
-#' @param data Output file from simulate_trials. Only simulate_trials output is supported.
+#' @param data Output file from simulate_trials() or simulate_trials_strata() in either "list" or "matrix" format. Only these formats are supported.
 #' @param time Positive number specifying the required assessment time.
 #' @param output_type Choice of "input" (output in same format as input),"matrix" (matrix format output) or "list" (list format output). Default="input".
 #' @param detailed_output Boolean to require full details of timings of competing processes. If FALSE, the simplified data only includes the *'ed output columns - this approximately halves RAM requirements. Default=TRUE (detailed).
@@ -478,16 +463,19 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
 #######################################################################################################
 #'Analyse simulations of time-to-event data using arbitrary event, censoring and recruitment distributions.
 #'
-#' Function for analysing simulated time-to-event trial data produced by simulate_trials.\cr
-#' Automatically reads in format from simulate_trials.\cr
-#' Performs log rank test and Cox regression analysis by default, but can also/instead choose RMST and/or landmark analyses.\cr
-#' Option is available to perform stratified analysis using the "stratum" argument.\cr
+#' Function for analysing simulated time-to-event trial data produced by simulate_trials() or simulate_trials_strata().\cr
+#' This function automatically reads in either list or matrix simulate_trials() data formats.
+#' It performs log rank test and Cox regression analysis by default, but can also/instead perform RMST and/or landmark analyses.
+#' Covariate adjusted (/ stratified) analysis may be selected by using the "stratum" argument.
 #' If a stratum is specified, it will be included as a covariate in Cox and RMST analysis, and as a stratum in a stratified log-rank test and an inverse-precision-weighted landmark test.
-#' Analysis is typically the slowest part of simulation, so parallel processing using the doParallel package is built in, enabled using the "parallel" argument.\cr
-#' Use of parallel processing recommended for >10000 simulations. Ensure that the number of cores specified does not exceed number of threads provided by hardware.
-#' @param data Output file from simulate_trials. Only simulate_trials output is supported, in either "list" or "matrix" format.
+#' Strata values are handled as factors, so continuous covariates are not supported.\cr
+#' Analysis is typically the slowest part of simulation studies, so parallel processing using the doParallel package is built in.
+#' Parallel processing is enabled by setting the number of cores in the "parallel_cores" argument.
+#' Use of parallel processing is recommended for largescale (e.g. 100,000 iteration) simulations. 
+#' To avoid unnecessary issues, ensure that the number of cores specified does not exceed number of threads provided by hardware.
+#' @param data Output file from simulate_trials(). Only simulate_trials() or simulate_trials_strata() output is supported, in either "list" or "matrix" format.
 #' @param LR Requests log-rank test and Cox regression. Default=TRUE
-#' @param RMST Requests Restricted Mean Survival Time analysis with specified (positive integer) restriction time, leave NULL for no analysis. This uses the survRM2 package. Default=NULL (no RMST analysis).
+#' @param RMST Requests Restricted Mean Survival Time analysis with specified (positive integer) restriction time, leave NULL for no analysis. Default=NULL (no RMST analysis).
 #' @param landmark Requests Landmark analysis at specified (positive integer) time, leave NULL for no analysis. Default=NULL (no landmark analysis).
 #' @param stratum Specify name of column of a stratification factor and turn on stratified (LR/LM) and covariate-adjusted (Cox/RMST) analysis. By default, "", and no stratification.
 #' @param parallel_cores Positive integer specifying number of cores to use. If 1 specified then no parallel processing. Default=1 (no parallel processing).
@@ -522,32 +510,32 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
 #'  \item{"LM_P"}{ 1-sided landmark analysis p-value (Landmark analysis only)}
 #' }
 #' @author James Bell
+#' @references Uno H, Claggett B, Tian L, Inoue E, Gallo P, Miyata T, Schrag D, Takeuchi M, Uyama Y, Zhao L,
+#'   Skali H, Solomon S, Jacobus S, Hughes M, Packer M, Wei LJ. Moving beyond the hazard ratio in
+#'   quantifying the between-group difference in survival analysis. Journal of clinical Oncology 2014,32, 2380-2385.
+#' Tian L, Zhao L, Wei LJ. Predicting the restricted mean event time with the subjects baseline covariates in survival analysis. 
+#'   Biostatistics 2014, 15, 222-233.  
 #' @examples example_sim <- simulate_trials(active_ecurve=Weibull(250,0.8),control_ecurve=Weibull(100,1),
-#' rcurve=LinearR(12,100,100), assess=20,iterations=2,seed=12345,detailed_output=TRUE)
+#' rcurve=LinearR(12,100,100), assess=20,iterations=100,seed=12345,detailed_output=TRUE)
 #'
 #' example_analysis1 <- analyse_sim(example_sim)
 #' example_analysis2 <- analyse_sim(data=example_sim,RMST=15,landmark=15)
 #'
 #' example_strat_sim <- simulate_trials_strata(stratum_probs=c(0.5,0.5),
 #' active_ecurve=c(Weibull(250,0.8),Weibull(100,1)), control_ecurve=Weibull(100,1),
-#' rcurve=LinearR(12,100,100),assess=20,iterations=2,seed=12345)
+#' rcurve=LinearR(12,100,100),assess=20,iterations=100,seed=12345)
 #'
 #' example_strat_analysis <- analyse_sim(data=example_strat_sim,RMST=15,landmark=15,stratum="Stratum")
 #' @export
-analyse_sim <- function(data, LR = TRUE, RMST = NULL, landmark=NULL, stratum="", parallel_cores=1){
-
+analyse_sim <- function(data, LR = TRUE, RMST = NA, landmark = NA, stratum="",parallel_cores=1){
 # Check that the correct packages are installed for specific options.
 # If not, disable options
   if(parallel_cores!= 1 && !requireNamespace("doParallel", quietly = TRUE)) {
     warning("Parallel processing requested but package \"doParallel\" needed for this. Please install it to enable parallel processing. Reverting to single-thread processing.\n")
     parallel_cores <- 1
   }
-  if(!is.null(RMST) && !requireNamespace("doParallel", quietly = TRUE)) {
-    warning("RMST analysis requested but package \"survRM2\" needed for this. Please install it to enable RMST analysis.\n")
-    RMST <- NULL
-  }
 
-  if(!LR & is.null(RMST) & is.null(landmark)){"At least one of 'LR', 'RMST' or 'landmark' must be TRUE to specify analysis to be performed"}
+  if(!LR && is.na(RMST) && is.na(landmark)){"At least one of 'LR', 'RMST' or 'landmark' must be TRUE to specify analysis to be performed"}
 
  #Required Input Check
   if(missing(data))stop("Error: Please specify the name of the simulated data set ('data').")
@@ -559,8 +547,10 @@ analyse_sim <- function(data, LR = TRUE, RMST = NULL, landmark=NULL, stratum="",
 
   #Positive integer
   if(!is.numeric(parallel_cores) || parallel_cores%%1!=0 || parallel_cores < 1 ) stop("Error: 'parallel_cores' argument is not a positive integer.")
-  if(!is.null(landmark) && (landmark%%1!=0 || landmark < 1 )) stop("Landmark analysis specified, but landmark time is not a positive integer.")
-  if(!is.null(RMST) && (RMST%%1!=0 || RMST < 1 )) stop("RMST analysis specified, but restriction time is not a positive integer.")
+  if(is.null(landmark)){landmark <- NA}
+  if(is.null(RMST)){RMST <- NA}
+  if(!is.na(landmark) && (landmark%%1!=0 || landmark < 1 )) stop("Landmark analysis specified, but landmark time is not a positive integer.")
+  if(!is.na(RMST) && (RMST%%1!=0 || RMST < 1 )) stop("RMST analysis specified, but restriction time is not a positive integer.")
 
   #Format checks and...
   #If in matrix format, split single huge data frame into one per iteration
@@ -588,71 +578,52 @@ analyse_sim <- function(data, LR = TRUE, RMST = NULL, landmark=NULL, stratum="",
   if(LR){
     if(parallel_cores>1){
       if(stratum==""){
-        outLR <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages="survival")%dopar% LR_analysis(i,data)
+        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages=c("survival"))%dopar% LR_analysis(i,data)
       } else {
-        outLR <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages="survival")%dopar% LR_cov_analysis(i,data,stratum)
+        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_cov_analysis", .packages=c("survival"))%dopar% LR_cov_analysis(i,data,stratum)
       }
     } else{
       if(stratum==""){
-        outLR <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages="survival")%do% LR_analysis(i,data)
+        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages="survival")%do% LR_analysis(i,data)
       } else {
-        outLR <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages="survival")%do% LR_cov_analysis(i,data,stratum)
+        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_cov_analysis", .packages="survival")%do% LR_cov_analysis(i,data,stratum)
       }
     }
-    if(!is.matrix(outLR)){outLR <- t(outLR)}
-    colnames(outLR) <- c("LogHR","HR","LogHR_SE","HR_Z","HR_P","LR_Z","Events_Active","Events_Control")
-    outLR[,"HR_P"] <- pnorm(outLR[,"HR_Z"])
-  #Note that LR_Z column at this stage is in fact the pchisq_LR, so we convert.
-  #Assume that directionality of Cox is same as LR, based on LR being Score test of Cox
-    outLR[,"LR_Z"] <- sign(outLR[,"LogHR"])*sqrt(outLR[,"LR_Z"])
-    LR_P <- pnorm(outLR[,"LR_Z"])
-    outLR <- cbind(outLR,LR_P)
-    out <- outLR[,c(2,1,3,4,5,6,9,7,8)]
-  }
-  # If RMST analysis required, do it. Separate calls depending on whether parallel processing enabled or stratified analysis requested
-  if(!is.null(RMST)){
-    if(parallel_cores>1){
-      if(stratum==""){
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_analysis", .packages="survRM2")%dopar% RMST_analysis(i,data,RMST)
-      } else {
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_analysis", .packages="survRM2")%dopar% RMST_cov_analysis(i,data,RMST,stratum)
-      }
-    }else{
-      if(stratum==""){
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_analysis", .packages="survRM2")%do% RMST_analysis(i,data,RMST)
-      } else {
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_analysis", .packages="survRM2")%do% RMST_cov_analysis(i,data,RMST,stratum)
-      }
-    }
+    if(!is.matrix(out)){out <- t(out)}
+    colnames(out) <- c("HR","LogHR","LogHR_SE","HR_Z","HR_P","LR_Z","LR_P","Events_Active","Events_Control")
 
-    if(!is.matrix(outRMST)){outRMST <- t(outRMST)}
-    outRMST <- cbind(RMST,outRMST)
-    colnames(outRMST) <- c("RMST_Restrict","RMST_Active","RMST_A_SE","RMST_Control","RMST_C_SE","RMST_Delta","RMST_D_SE","RMST_Z","RMST_P")
-    out <- if(LR){cbind(out,outRMST)} else{outRMST}
+  #Note that at this stage: LogHR_SE column is the variance
+    out[,"HR"] <- exp(out[,"LogHR"])
+    out[,"LogHR_SE"] <- sqrt(out[,"LogHR_SE"])
+    out[,"HR_Z"] <- out[,"LogHR"]/out[,"LogHR_SE"]
+    out[,"HR_P"] <- pnorm(out[,"HR_Z"])
+    out[,"LR_P"] <- pnorm(out[,"LR_Z"])
   }
-  # If landmark analysis required, do it. Separate calls depending on whether parallel processing enabled or stratified analysis requested
-  if(!is.null(landmark)){
+
+  # If RMST analysis required, do it. Separate calls depending on whether parallel processing enabled or stratified analysis requested
+  if(!is.na(RMST) || !is.na(landmark)){
     if(parallel_cores>1){
       if(stratum==""){
-        outLM <- foreach(i=1:maxiter,.combine="rbind",.export="LM_analysis", .packages="survival")%dopar% LM_analysis(i,data,landmark)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_analysis")%dopar% RMST_LM_analysis(i,data,RMST,landmark)
       } else {
-        outLM <- foreach(i=1:maxiter,.combine="rbind",.export="LM_analysis", .packages="survival")%dopar% LM_cov_analysis(i,data,landmark,stratum)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_cov_analysis")%dopar% RMST_LM_cov_analysis(i,data,RMST,landmark,stratum)
       }
     }else{
       if(stratum==""){
-        outLM <- foreach(i=1:maxiter,.combine="rbind",.export="LM_analysis", .packages="survival")%do% LM_analysis(i,data,landmark)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_analysis")%do% RMST_LM_analysis(i,data,RMST,landmark)
       } else {
-        outLM <- foreach(i=1:maxiter,.combine="rbind",.export="LM_analysis", .packages="survival")%do% LM_cov_analysis(i,data,landmark,stratum)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_cov_analysis")%do% RMST_LM_cov_analysis(i,data,RMST,landmark,stratum)
       }
     }
-    if(!is.matrix(outLM)){outLM <- t(outLM)}
-    delta <- outLM[,1]-outLM[,3]
-    delta_se <- sqrt(outLM[,2]^2+outLM[,4]^2)
-    Z <- delta/delta_se
-    p <- pnorm(-Z)
-    outLM <- cbind(landmark,outLM,delta,delta_se,Z,p)
-    colnames(outLM) <- c("LM_Time","LM_Active","LM_A_SE","LM_Control","LM_C_SE","LM_Delta","LM_D_SE","LM_Z","LM_P")
-    out <- if(LR|!is.null(RMST)){cbind(out,outLM)} else{outLM}
+    if(!is.matrix(outRMST)){outRMST <- t(outRMST)}
+    colnames(outRMST) <- c("RMST_Restrict","RMST_Active","RMST_A_SE","RMST_Control","RMST_C_SE","RMST_Delta","RMST_D_SE","RMST_Z","RMST_P","LM_Time","LM_Active","LM_A_SE","LM_Control","LM_C_SE","LM_Delta","LM_D_SE","LM_Z","LM_P")
+    outRMST[,"RMST_Z"] <- outRMST[,"RMST_Delta"]/outRMST[,"RMST_D_SE"]
+    outRMST[,"RMST_P"] <- pnorm(-outRMST[,"RMST_Z"])
+    outRMST[,"LM_Z"] <- outRMST[,"LM_Delta"]/outRMST[,"LM_D_SE"]
+    outRMST[,"LM_P"] <- pnorm(-outRMST[,"LM_Z"])
+    if(is.na(RMST)){outRMST <- outRMST[,10:18]}
+    if(is.na(landmark)){outRMST <- outRMST[,1:9]}
+    out <- if(LR){cbind(out,outRMST)} else{outRMST}
   }
   return(out)
 }
@@ -666,11 +637,8 @@ analyse_sim <- function(data, LR = TRUE, RMST = NULL, landmark=NULL, stratum="",
 ################################################################################
 LR_analysis <- function(i,data){
   iterdata <- data[[i]]
-  analysis <- coxph(Surv(iterdata[,"Time"],1-iterdata[,"Censored"])~ iterdata[,"Trt"],ties="breslow")
-  results <- c(coef(summary(analysis)),analysis$score,
-               length(iterdata[(iterdata[,"Trt"]==2 & iterdata[,"Censored"]==0),1]),
-               length(iterdata[(iterdata[,"Trt"]==1 & iterdata[,"Censored"]==0),1])
-  )
+  fit <- coxph.fit(x=matrix(iterdata[,"Trt"],ncol=1), y=Surv(iterdata[,"Time"],1-iterdata[,"Censored"]), strata=NULL, offset=NULL, init=NULL, control=coxph.control(), method = "breslow",rownames=1:nrow(iterdata))
+  output <- c(NA,fit$coefficients,fit$var,c(NA,NA),sqrt(fit$score)*sign(fit$coefficients[1]),NA,length(iterdata[(iterdata[,"Trt"]==2 & iterdata[,"Censored"]==0),1]),length(iterdata[(iterdata[,"Trt"]==1 & iterdata[,"Censored"]==0),1]))
 }
 
 ################################################################################
@@ -679,213 +647,334 @@ LR_analysis <- function(i,data){
 # Takes as input:
 #  i:   	integer of simulation to be analysed
 #  data:	data set produced by the simulate_trials function
-#  cov:     covariate
+#  cov:     covariate column name
 ################################################################################
 LR_cov_analysis <- function(i,data,cov){
   iterdata <- data[[i]]
-  analysis <- coxph(Surv(iterdata[,"Time"],1-iterdata[,"Censored"])~ iterdata[,"Trt"] + iterdata[,cov],ties="breslow")
+  covs <- length(cov)
+  analysis <- coxph(Surv(iterdata[,"Time"],1-iterdata[,"Censored"])~ iterdata[,"Trt"] + as.factor(iterdata[,cov]),ties="breslow")
   analysisLR <- survdiff(Surv(iterdata[,"Time"],1-iterdata[,"Censored"])~ iterdata[,"Trt"] + strata(iterdata[,cov]))
-  results <- c(coef(summary(analysis))[1,],analysisLR$chisq,
-               length(iterdata[(iterdata[,"Trt"]==2 & iterdata[,"Censored"]==0),1]),
-               length(iterdata[(iterdata[,"Trt"]==1 & iterdata[,"Censored"]==0),1])
-  )
+  output <- c(NA,coef(summary(analysis))[1,1],coef(summary(analysis))[1,3]^2,c(NA,NA),sqrt(analysisLR$chisq)*sign(sum(analysisLR$exp[1,])-sum(analysisLR$obs[1,])),NA,length(iterdata[(iterdata[,"Trt"]==2 & iterdata[,"Censored"]==0),1]),length(iterdata[(iterdata[,"Trt"]==1 & iterdata[,"Censored"]==0),1]))
 }
 
 ###############################################################################
-# RMST_analysis ; Helper function for RMST analysis in analyse_sim
-# Requires the 'survRM2' package to be pre-loaded
+# RMST_LM_analysis ; Helper function for RMST & LM analysis in analyse_sim
+# Requires the 'survival' default R package to be pre-loaded
+# Combining LM and RMST into single function allows for considerable computational savings when both are required.
 # Takes as input:
 #  i:   	integer of simulation to be analysed
 #  data:	data set produced by the simulate_trials function
-#  restriction: positive value for restriction time for RMST analysis
-#
-# Note: This returns the SE, rather than the CI
+#  restriction: positive value for restriction time for RMST analysis (NA for do not calculate)
+#  landmark: positive value for landmark analysis time (NA for do not calculate)
 ###############################################################################
-RMST_analysis <- function(i,data,restriction){
+RMST_LM_analysis <- function(i,data,restriction=NA,landmark=NA){
+
+
+  #Inner function for calculating rmst and lm with no covariates.
+  #By combining rmst and lm calculations, avoid duplicating rate-limiting tabulation step
+  rmst_lm <- function (time, status, arm, restriction = NA,landmark=NA){
+
+    #Fast inner function for RMST calculation
+    rmst_fast <- function (tab, restriction){
+      index     <- tab$time <= restriction
+      nrisk     <- tab$n.risk[index]
+      nevent    <- tab$n.event[index]
+      areas     <- diff(c(0, sort(c(tab$time[index], restriction)))) * c(1, tab$surv[index])
+      rmst      <- sum(areas)
+      var1      <- rep(0,length(nrisk))
+      var1[(nrisk - nevent) != 0] <- nevent/(nrisk * (nrisk - nevent))
+      rmst_var  <- sum(cumsum(rev(areas[-1]))^2 * rev(c(var1, 0))[-1])
+      rmst_se   <- sqrt(rmst_var)
+      return(c(rmst, rmst_se, rmst_var))
+    }
+
+    # Fast function for KM estimate production. Rate-limiting-step is the table call.
+    survfit_fast <- function (time,events){
+      n      <- length(time)
+      temp   <- table(factor(time),factor(events,levels=0:1))
+      nevent <- as.vector(temp[, 2])
+      ncens  <- as.vector(temp[, 1])
+      times  <- as.numeric(row.names(temp))
+      nrisk  <- n - c(0,cumsum(nevent+ncens)[-n])
+      trisk  <- ifelse(nrisk == 0, 1, nrisk)
+      surv   <- cumprod((trisk - nevent)/trisk)
+      se     <- surv*sqrt(cumsum(nevent/(trisk * (trisk - nevent))))
+      return(list(n = n, time = times, n.risk = nrisk, n.event = nevent, n.censor = ncens, surv = surv,se = se))
+    }
+
+    lm_analysis <- function(tab,landmark){
+      if(is.na(tab$time[1]>0) | tab$time[1] > landmark){
+        S <- 1
+        SE <- 0
+      }else{
+        cutoff <- which.max(tab$time[tab$time <= landmark])
+        S <- tab$surv[cutoff]
+        SE <- tab$se[cutoff]
+      }
+      return(c(S,SE))
+    }
+
+    maxT0 <- max(time[arm == 0])
+    maxT1 <- max(time[arm == 1])
+
+    tab1 <- survfit_fast(time[arm == 1],status[arm == 1])
+    tab0 <- survfit_fast(time[arm == 0],status[arm == 0])
+ 
+    if(!is.na(restriction) && maxT0 >= restriction){
+      wk0 <- rmst_fast(tab0, restriction)
+    } else {
+      wk0 <- c(NA,NA)
+    }
+    if(!is.na(restriction) && maxT1 >= restriction){
+      wk1 <- rmst_fast(tab1, restriction)
+    } else {
+      wk1 <- c(NA,NA)
+    }
+    if(!is.na(landmark) && maxT0 >= landmark){
+      lm0 <- lm_analysis(tab0,landmark)
+    } else {
+      lm0 <- c(NA,NA)
+    }
+    if(!is.na(landmark) && maxT1 >= landmark){
+      lm1 <- lm_analysis(tab1,landmark)
+    } else {
+      lm1 <- c(NA,NA)
+    }
+
+    Z <- list()
+    Z$RMST.arm1 <- wk1[1:2]
+    Z$RMST.arm0 <- wk0[1:2]
+    Z$RMST.diff <- c(wk1[1] - wk0[1], sqrt(wk1[3] + wk0[3]))
+    Z$LM.arm1 <- lm1[1:2]
+    Z$LM.arm0 <- lm0[1:2]
+    Z$LM.diff <- c(lm1[1] - lm0[1], sqrt(lm1[2]^2 + lm0[2]^2))
+    return(Z)
+  }
+
   iterdata <- data[[i]]
-  results <- rep(NA,8)
-  tryCatch(
-    {
-      analysis <- rmst2(time=iterdata[,"Time"],status=1-iterdata[,"Censored"],arm=iterdata[,"Trt"]-1,tau=restriction,alpha=0.05)
-      SE <- abs(analysis$unadjusted.result[1,1]-analysis$unadjusted.result[1,2])/qnorm(0.975)
-      Z <- analysis$unadjusted.result[1,1]/SE
-      results <- c(
-        analysis$RMST.arm1$result[1,1],analysis$RMST.arm1$result[1,2],
-        analysis$RMST.arm0$result[1,1],analysis$RMST.arm0$result[1,2],
-        analysis$unadjusted.result[1,1], SE, Z, pnorm(-Z)
-      )
-    },error=function(e){results <- rep(NA,8)}
-  )
-  return(results)
+  analysis <- rmst_lm(time=iterdata[,"Time"], status=1-iterdata[,"Censored"], arm=iterdata[,"Trt"]-1, restriction = restriction,landmark=landmark)
+  return(c(restriction,analysis$RMST.arm1,analysis$RMST.arm0,analysis$RMST.diff,c(NA,NA),landmark,analysis$LM.arm1,analysis$LM.arm0,analysis$LM.diff,c(NA,NA)))
 }
 
 ###############################################################################
 # RMST_cov_analysis ; Helper function for RMST analysis in analyse_sim
-# Date: 15/11/18
-# Author: James Bell, james.bell.ext@boehringer-ingelheim.com
-#
-# Requires the 'survRM2' package to be pre-loaded
+# Requires the 'survival' default R package to be pre-loaded
 # Takes as input:
 #  i:   	integer of simulation to be analysed
 #  data:	data set produced by the simulate_trials function
 #  restriction: positive value for restriction time for RMST analysis
+#  landmark: positive value for landmark analysis time (NA for do not calculate)
 #  stratum: name of stratum column
-#
-# Note: This returns the SE, rather than the CI
 ###############################################################################
-RMST_cov_analysis <- function(i,data,restriction,stratum){
-  iterdata <- data[[i]]
-  results <- rep(NA,8)
-  tryCatch(
-    {
-      analysis <- rmst2(time=iterdata[,"Time"],status=1-iterdata[,"Censored"],arm=iterdata[,"Trt"]-1,tau=restriction,alpha=0.05,covariates=iterdata[,stratum])
-      SE <- abs(analysis$adjusted.result[1,1]-analysis$adjusted.result[1,2])/qnorm(0.975)
-      Z <- analysis$adjusted.result[1,1]/SE
-      arm1 <- analysis$adjusted.result[1,1]*analysis$adjusted.result[2,1]/(analysis$adjusted.result[2,1]-1)
-      arm0 <- arm1 - analysis$adjusted.result[1,1]
-      results <- c(
-        arm1,NA,
-        arm0,NA,
-        analysis$adjusted.result[1,1], SE, Z, pnorm(-Z)
-      )
-    },error=function(e){results <- rep(NA,8)}
-  )
-  return(results)
-}
+RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
 
+  #Core function for calculating RMST with covariates. Supports class covariates. 
+  rmstcov <- function (time, status, arm, restriction, covariates){
+    #rmstcovreg is the inner function used for performing the regression for calculating RMST with covariates
+    rmstcovreg <- function (y, status, x, arm, restriction){
 
-###############################################################################
-# LM_analysis ; Helper function for landmark analysis in analyse_sim
-#
-# Requires the 'survival' default R package to be pre-loaded
-# Takes as input:
-#  i:   	integer of simulation to be analysed
-#  data:	data set produced by the simulate_trials function
-#  landmarktime: positive value for landmark analysis time
-###############################################################################
-LM_analysis <- function(i,data,landmarktime){
-  iterdata <- data[[i]]
-  max1 <- max(iterdata[iterdata[,"Trt"]== 1,"Time"])
-  max2 <- max(iterdata[iterdata[,"Trt"]== 2,"Time"])
-  nogo1 <- 0
-  nogo2 <- 0
-  if(max1<landmarktime){
-    S1 <- NA
-    SE1 <- NA
-    nogo1 <- 1
-  }
-  if(max2<landmarktime){
-    S2 <- NA
-    SE2 <- NA
-    if(nogo1 == 1){return(c(S1,SE1,S2,SE2))}
-    nogo2 <- 1
-  }
+        xmat <- cbind(1, x)
+        ncovariates <- ncol(xmat)
+        yv <- pmin(y, restriction)
+        ev <- status
+        ev[yv == restriction] <- 1
+        
+        isarm1 <- arm == 1
+        yv1 <- yv[isarm1]
+        yord1 <- order(yv1)
+        yv1 <- yv1[yord1]
+        ev1 <- ev[isarm1][yord1]
+        xmat1  <- xmat[isarm1,][yord1,]
+        n1  <- length(ev1)
+        yv1table <- table(yv1)
 
-  survival <- summary(survfit(Surv(iterdata[,"Time"],1-iterdata[,"Censored"])~ iterdata[,"Trt"],error="greenwood"))
-  survivala <- survival[c("time","surv","std.err","strata")]
-  if(nogo1==0){
-    survival1a <- sapply(survivala, "[",survival$strata=='iterdata[, "Trt"]=1')
-    if(is.vector(survival1a)){survival1a <- t(as.matrix(survival1a))}
-    if(is.na(survival1a[1,"time"]>0) | survival1a[1,"time"] > landmarktime){
-      S1 <- 1
-      SE1 <- 0
-    }else{
-        survival1a <- survival1a[survival1a[,"time"] <= landmarktime,,drop=FALSE]
-        cutoff1 <- which.max(survival1a[,"time"])
-        S1 <- survival1a[cutoff1,"surv"]
-        SE1 <- survival1a[cutoff1,"std.err"]
+        isarm0 <- arm == 0
+        yv0 <- yv[isarm0]
+        yord0 <- order(yv0)
+        yv0 <- yv0[yord0]
+        ev0 <- ev[isarm0][yord0]
+        xmat0  <- xmat[isarm0,][yord0,]
+        n0  <- length(ev0)
+        yv0table <- table(yv0)
+
+        w1 <- ev1/rep(survfit(Surv(yv1, 1 - ev1) ~ 1)$surv, yv1table)
+        w0 <- ev0/rep(survfit(Surv(yv0, 1 - ev0) ~ 1)$surv, yv0table)
+
+        Beta <- lm(c(yv1, yv0) ~ rbind(xmat1, xmat0) - 1, weights = c(w1, w0))$coef
+        score1 <- xmat1*w1*(yv1-as.vector(xmat1 %*% Beta))
+        score0 <- xmat0*w0*(yv0-as.vector(xmat0 %*% Beta))
+
+        yv1revcumsum <- (n1+1)-as.vector(rev(cumsum(rev(yv1table))))
+        yv1pos   <- rep(yv1revcumsum,yv1table)
+        yv1loc <- n1+1-yv1pos
+        yv1forward <- rep(as.vector(cumsum(yv1table)),yv1table)
+
+        tab1 <-  p3temp21 <- matrix(rep(NA,n1*ncovariates),ncol=ncovariates)
+        for(i in 1:ncovariates){
+           tab1[,i]<- rev(cumsum(rev(score1[,i])))[yv1pos]
+        }
+
+        part2_1 <- tab1*(1-ev1)/yv1loc
+        p3temp11 <- part2_1/yv1loc
+        for(i in 1:ncovariates){
+          p3temp21[,i] <- cumsum(p3temp11[,i]) 
+        }
+        part3_1 <- p3temp21[yv1forward,]
+        arm1 <- score1+part2_1-part3_1
+
+        yv0revcumsum <- (n0+1)-as.vector(rev(cumsum(rev(yv0table))))
+        yv0pos   <- rep(yv0revcumsum,yv0table)
+        yv0loc <- n0+1-yv0pos
+        yv0forward <- rep(as.vector(cumsum(yv0table)),yv0table)
+
+        tab0 <-  p3temp20 <- matrix(rep(NA,n0*ncovariates),ncol=ncovariates)
+        for(i in 1:ncovariates){
+           tab0[,i]<- rev(cumsum(rev(score0[,i])))[yv0pos]
+        }
+
+        part2_0 <- tab0*(1-ev0)/yv0loc
+        p3temp10 <- part2_0/yv0loc
+
+        for(i in 1:ncovariates){
+          p3temp20[,i] <- cumsum(p3temp10[,i]) 
+        }
+        part3_0 <- p3temp20[yv0forward,]
+        arm0 <- score0+part2_0-part3_0
+
+        gamma <- t(arm1) %*% arm1 + t(arm0) %*% arm0
+        X2 <- t(xmat) %*% xmat
+        varBeta <- solve(X2) %*% gamma %*% solve(X2)
+
+        return(list(Beta,varBeta))
     }
-  }
-  if(nogo2==0){
-    survival2a <- sapply(survivala, "[",survival$strata=='iterdata[, "Trt"]=2')
-    if(is.vector(survival2a)){survival2a <- t(as.matrix(survival2a))}
-    if(is.na(survival2a[1,"time"]>0) | survival2a[1,"time"] > landmarktime){
-      S2 <- 1
-      SE2 <- 0
-    }else{
-      survival2a <- survival2a[survival2a[,"time"] <= landmarktime,,drop=FALSE]
-      cutoff2 <- which.max(survival2a[,"time"])
-      S2 <- survival2a[cutoff2,"surv"]
-      SE2 <- survival2a[cutoff2,"std.err"]
-    }
-  }
-  results <- c(S2,SE2,S1,SE1)
-  return(results)
-}
-
-###############################################################################
-# LM_cov_analysis ; Helper function for landmark analysis in analyse_sim
-#
-# Requires the 'survival' default R package to be pre-loaded
-# Takes as input:
-#  i:   	integer of simulation to be analysed
-#  data:	data set produced by the simulate_trials function
-#  landmarktime: positive value for landmark analysis time
-#  stratum: name of the stratum column
-###############################################################################
-LM_cov_analysis <- function(i,data,landmarktime,stratum){
-  iterdata <- data[[i]]
-  trtsplit <- split.data.frame(iterdata,iterdata[,"Trt"])
-  trtsplit1 <- split.data.frame(trtsplit[[1]],trtsplit[[1]][,stratum])
-  trtsplit2 <- split.data.frame(trtsplit[[2]],trtsplit[[2]][,stratum])
-  length1 <- length(trtsplit1)
-  length2 <- length(trtsplit2)
-  max1 <- S1 <- SE1 <- rep(NA,length1)
-  max2 <- S2 <- SE2 <- rep(NA,length2)
-  survival1 <- vector("list",length1)
-  survival2 <- vector("list",length2)
-
-  for(j in 1:length1){
-    max1[j] <- max(trtsplit1[[j]][,"Time"])
-    if(max1[j] >= landmarktime){
-      survival1[[j]] <- sapply(summary(survfit(Surv(Time,1-Censored)~ 1,error="greenwood",data=data.frame(trtsplit1[[j]])))[c("time","surv","std.err")],"[")
-      if(is.vector(survival1[[j]])){survival1[[j]] <- t(as.matrix(survival1[[j]]))}
-      if(is.na(survival1[[j]][1,"time"]>0) | survival1[[j]][1,"time"] > landmarktime){
-        S1[j]  <- 1
-        SE1[j] <- 0
-      }else{
-        temp   <- survival1[[j]][survival1[[j]][,"time"] <= landmarktime,,drop=FALSE]
-        cutoff <- which.max(temp[,"time"])
-        S1[j]  <- temp[cutoff,"surv"]
-        SE1[j] <- temp[cutoff,"std.err"]
+    #function to handle class covariates, unstacking them into binary variables
+    unstacker <- function(covariate){
+      levs <- levels(covariate)
+      width <- length(levs)-1
+      if(width<1){return(NULL)}
+      output <- matrix(rep(0,length(covariate)*width),ncol=width)
+      for(i in 1:width){
+        output[,i] <- 1*(covariate==levs[i+1])
       }
+      colnames(output) <- levs[-1]
+      return(output)
     }
-  }
 
-  for(j in 1:length2){
-    max2[j] <- max(trtsplit2[[j]][,"Time"])
-    if(max2[j] >= landmarktime){
-      survival2[[j]] <- sapply(summary(survfit(Surv(Time,1-Censored)~ 1,error="greenwood",data=data.frame(trtsplit2[[j]])))[c("time","surv","std.err")],"[")
-      if(is.vector(survival2[[j]])){survival2[[j]] <- t(as.matrix(survival2[[j]]))}
-      if(is.na(survival2[[j]][1,"time"]>0) | survival2[[j]][1,"time"] > landmarktime){
-        S2[j] <- 1
-        SE2[j] <- 0
-      }else{
-        temp <- survival2[[j]][survival2[[j]][,"time"] <= landmarktime,,drop=FALSE]
-        cutoff <- which.max(temp[,"time"])
-        S2[j]  <- temp[cutoff,"surv"]
-        SE2[j] <- temp[cutoff,"std.err"]
+    if(is.null(ncol(covariates))|| ncol(covariates) == 1){
+      if(is.factor(covariates)){
+        covariates <- unstacker(covariates)
       }
+    } else{
+      size <- ncol(covariates)
+      tempcovs <- vector("list", length = size)
+      for(i in 1:size){
+        if(is.factor(covariates[,i])){
+          tempcovs[[i]] <- unstacker(covariates[,i])
+        } else {tempcovs[[i]] <- covariates[,i]}
+      }
+      covariates <- do.call("cbind",tempcovs)
     }
+    aa <- rmstcovreg(time, status, as.matrix(cbind(arm, covariates)), arm, restriction)
+    Z <- list()
+    covariates <- as.matrix(covariates)
+    props <- colSums(covariates)/nrow(covariates)
+    covrange <- if(is.null(covariates)){NULL} else{3:(2+ncol(covariates))}
+    Z$RMST.arm1 <- c(aa[[1]][1] + aa[[1]][2] + sum(props*aa[[1]][covrange]), sqrt(sum(outer(c(1,1,props),c(1,1,props))*aa[[2]])))
+    Z$RMST.arm0 <- c(aa[[1]][1]+ sum(props*aa[[1]][covrange]), sqrt(sum(outer(c(1,props),c(1,props))*aa[[2]][-2,-2])))
+    Z$RMST.diff <- c(aa[[1]][2],sqrt(aa[[2]][2,2]))
+    return(Z)
   }
 
-  V1   <- SE1^2
-  V2   <- SE2^2
-  S1T  <- sum(S1/V1)/sum(1/V1)
-  S2T  <- sum(S2/V2)/sum(1/V2)
-  SE1T <- sqrt(1/sum(1/V1))
-  SE2T <- sqrt(1/sum(1/V2))
-  results <- c(S2T,SE2T,S1T,SE1T)
-  return(results)
+  #Core landmark with covariates calculation function
+  lm_cov <- function(time,status,arm,stratum,landmark){
+    # Fast function for KM estimate production. Rate-limiting-step is the table call.
+    survfit_fast <- function (time,events){
+      n      <- length(time)
+      temp   <- table(factor(time),factor(events,levels=0:1))
+      nevent <- as.vector(temp[, 2])
+      ncens  <- as.vector(temp[, 1])
+      times  <- as.numeric(row.names(temp))
+      nrisk  <- n - c(0,cumsum(nevent+ncens)[-n])
+      trisk  <- ifelse(nrisk == 0, 1, nrisk)
+      surv   <- cumprod((trisk - nevent)/trisk)
+      se     <- surv*sqrt(cumsum(nevent/(trisk * (trisk - nevent))))
+      temp   <- list(n = n, time = times, n.risk = nrisk, n.event = nevent, n.censor = ncens, surv = surv,se = se)
+      return(temp)
+    }
+
+    lm_analysis <- function(ft,landmark){
+      if(is.na(ft$time[1]>0) | ft$time[1] > landmark){
+        S  <- 1
+        SE <- 0
+      }else{
+        cutoff <- which.max(ft$time[ft$time <= landmark])
+        S  <- ft$surv[cutoff]
+        SE <- ft$se[cutoff]
+      }
+      return(c(S,SE))
+    }
+
+    if (!is.vector(stratum) && ncol(stratum)>1){
+      store  <- colSums(t(stratum)*pi^((1:ncol(stratum))-1))
+      stratum <- match(store,unique(store))
+    }
+ 
+    ustrat <- unique(stratum)
+    nstrat <- length(ustrat)
+    if(nstrat<1)stop("Error: No strata have been specified")
+    lm0 <- lm1 <- matrix(rep(NA,2*nstrat),ncol=2)
+    for(i in 1: nstrat){
+      relevant0 <- arm == 0 & stratum == ustrat[i]
+      relevant1 <- arm == 1 & stratum == ustrat[i]
+      if(max(time[relevant0]) >= landmark){
+        lm0[i,] <- lm_analysis(survfit_fast(time[relevant0],status[relevant0]),landmark)
+      } else {lm0[i,] <- c(NA,NA)}
+      if(max(time[relevant1]) >= landmark){
+        lm1[i,] <- lm_analysis(survfit_fast(time[relevant1],status[relevant1]),landmark)
+      } else {lm1[i,] <- c(NA,NA)}
+    }
+
+    V0   <- lm0[,2]^2
+    V1   <- lm1[,2]^2
+
+    S0   <- sum(lm0[,1]/V0)/sum(1/V0)
+    S1   <- sum(lm1[,1]/V1)/sum(1/V1)
+    SE0  <- sqrt(1/sum(1/V0))
+    SE1  <- sqrt(1/sum(1/V1))
+
+    Z <- list()
+    Z$LM.arm1 <- c(S1,SE1)
+    Z$LM.arm0 <- c(S0,SE0)
+    Z$LM.diff <- c(S1-S0, sqrt(SE1^2 + SE0^2))
+    return(Z)
+  }
+
+  iterdata <- data[[i]]
+  if(!is.na(restriction)){
+    results <- rmstcov(time=iterdata[,"Time"],status=1-iterdata[,"Censored"],arm=iterdata[,"Trt"]-1,restriction=restriction,covariates=as.factor(iterdata[,stratum]))
+    rmst <- c(restriction,results$RMST.arm1,results$RMST.arm0,results$RMST.diff,c(NA,NA))
+  } else {rmst <- rep(NA,9)}
+  if(!is.na(landmark)){
+    analysis <- lm_cov(time=iterdata[,"Time"], status=1-iterdata[,"Censored"], arm=iterdata[,"Trt"]-1, stratum=iterdata[,stratum],landmark=landmark)
+    lm <- c(landmark,analysis$LM.arm1,analysis$LM.arm0,analysis$LM.diff,c(NA,NA))
+  } else {lm <- rep(NA,9)}
+  return(c(rmst,lm))
 }
+
+
+
+
+
+
+
 
 #######################################################################################################
 #'Summarise analyses of simulations of time-to-event data using arbitrary event, censoring and recruitment distributions.
 #'
-#' Function for summarising the analyses of simulated time-to-event trial data produced by analyse_sim.\cr
-#' Automatically reads in format from analyse_sim; no other input format is supported.\cr
-#' Automatically detects types of analysis performed and provides relevant summaries (log-rank, Cox, RMST, landmark).\cr
-#' @param analysed_results Output file from analyse_sim. Only analyse_sim output is supported.
+#' Function for summarising the analyses of simulated time-to-event trial data produced by analyse_sim().\cr
+#' Automatically reads in format from analyse_sim(); no other input format is supported.\cr
+#' It automatically detects types of analysis performed and provides relevant summaries (log-rank, Cox, RMST, landmark).\cr
+#' @param analysed_results Output file from analyse_sim(). Only analyse_sim() output is supported.
 #' @param alpha1 1-sided alpha to be used for analysis. Default=0.025.
 #' @return Returns a table with one row. Table contains the following columns:
 #' \itemize{
