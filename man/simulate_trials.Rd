@@ -52,6 +52,7 @@ Returns a table with one row per patient per simulation. Table contains the foll
  \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed)}
  \item{"Rec_Time"}{ Simulated (trial) time of recruitment}
  \item{"Assess"}{ Prespecified (trial) time of assessment}
+ \item{"Max_F"}{ Prespecified maximum patient follow-up time}
  \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed)}
 }
 }

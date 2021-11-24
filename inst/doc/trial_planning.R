@@ -46,8 +46,8 @@ output
 censorCurveA <- Exponential(lambda=0.001)
 censorCurveC <- Exponential(lambda=0.002)
 
-# Run nph_traj with default settings to calculate expected properties up to 10 months
-output1 <- nph_traj(active_ecurve=activeCurve,control_ecurve=controlCurve,active_dcurve=censorCurveA,control_dcurve=censorCurveC,rcurve=rcurve3,max_assessment=10,detailed_output = TRUE,required_power = 0.9)
+# Run nph_traj with default settings to calculate expected properties up to 10 months in a NI setting against a HR bound of 1.3.
+output1 <- nph_traj(active_ecurve=activeCurve,control_ecurve=controlCurve,active_dcurve=censorCurveA,control_dcurve=censorCurveC,rcurve=rcurve3,max_assessment=10,HRbound=1.3,detailed_output = TRUE,required_power = 0.9)
 # Display output
 output1
 
@@ -111,7 +111,7 @@ head(analysis3)
 
 ## -----------------------------------------------------------------------------
 # Perform log-rank test, Cox regression, landmark analysis and RMST analysis on simulated data using parallel processing.
-analysis2 <- analyse_sim(data=simulation2, RMST=10, landmark=10, parallel_cores=2)
+analysis2 <- analyse_sim(data=simulation2, RMST=10, landmark=10, parallel_cores=1)
 head(analysis2)
 
 

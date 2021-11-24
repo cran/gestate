@@ -10,10 +10,11 @@
 #' @param HR Hazard Ratio. Values below 1 indicate a benefit to the active arm vs control.
 #' @param ratio Randomisation ratio (Schoenfeld), or event ratio (event proportion method). Default=1.
 #' @param alpha1 1-sided alpha. Default=0.025.
+#' @param HRbound HRvalue to test against. Default=1 (superiority).
 #' @return Power as a decimal
 #' @keywords internal
-events2power <- function(events,HR,ratio=1,alpha1=0.025){
-  power <- pnorm(sqrt(events*ratio)*-log(HR)/(ratio+1)- qnorm(1-alpha1))
+events2power <- function(events,HR,ratio=1,alpha1=0.025,HRbound=1){
+  power <- pnorm(sqrt(events*ratio)*-log(HR/HRbound)/(ratio+1)- qnorm(1-alpha1))
   return(power)
 }
 
@@ -23,10 +24,11 @@ events2power <- function(events,HR,ratio=1,alpha1=0.025){
 #' @param HR Hazard Ratio. Values below 1 indicate a benefit to the active arm vs control.
 #' @param ratio Randomisation ratio (Schoenfeld), or event ratio (event proportion method). Default=1.
 #' @param alpha1 1-sided alpha. Default=0.025.
+#' @param HRbound HRvalue to test against. Default=1 (superiority).
 #' @return Required event number
 #' @keywords internal
-power2events <- function(power,HR,ratio=1,alpha1=0.025){
-  events <- (((ratio+1)^2/ratio)*(qnorm(1-alpha1)+qnorm(power))^2)/(log(HR)^2)
+power2events <- function(power,HR,ratio=1,alpha1=0.025,HRbound=1){
+  events <- (((ratio+1)^2/ratio)*(qnorm(1-alpha1)+qnorm(power))^2)/(log(HR/HRbound)^2)
   events[HR > 1] <- Inf
   return(events)
 }
@@ -52,13 +54,14 @@ ZV2power <- function(Z,V=1,alpha1=0.025){
 #' @param Rratio Randomisation ratio. Default=1.
 #' @param startpower Initial estimate of power. Default=0.5.
 #' @param alpha1 1-sided alpha. Default=0.025.
+#' @param HRbound HRvalue to test against. Default=1 (superiority).
 #' @param iter Number of iterations to perform. Default=10.
 #' @return Power as a decimal
 #' @author James Bell
 #' @references Bell J, Power Calculations for Time-to-Event Trials Using Predicted Event Proportions, 2019, paper under review.
 #' @examples frontierpower(events=300,HR=0.7,Eratio=1.2,Rratio=1.5,alpha1=0.025)
 #' @export
-frontierpower <- function(events,HR,Eratio,Rratio=1,startpower=0.5,alpha1=0.025,iter=10){
+frontierpower <- function(events,HR,Eratio,Rratio=1,startpower=0.5,alpha1=0.025,HRbound=1,iter=10){
   HR <- pmin(pmax(1,events),pmax(pmin(1,1/events),HR))
   P <- Rratio/(Rratio+1)
   pi <- Eratio/(Eratio+1)
@@ -67,7 +70,7 @@ frontierpower <- function(events,HR,Eratio,Rratio=1,startpower=0.5,alpha1=0.025,
   for(i in 1:iter){
     pi2 <- pmin(1-cap,pmax(cap,P+(pi-P)*(qnorm(1-alpha1)/(qnorm(1-alpha1)+qnorm(power)))))
     ratio <- pi2/(1-pi2)
-    power <- events2power(events=events,HR=HR,ratio=ratio,alpha1=alpha1)
+    power <- events2power(events=events,HR=HR,ratio=ratio,alpha1=alpha1,HRbound=HRbound)
   }
   return(power)
 }

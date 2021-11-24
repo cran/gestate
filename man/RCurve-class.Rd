@@ -29,13 +29,15 @@ This class extends the Curve class, adding recruitment-related quantities such a
 \item{\code{pnames}}{Names of parameters defining the distribution. Should be a vector of length paramno.}
 
 \item{\code{pnames}}{Values of parameters defining the distribution. Should be a list of length paramno.}
+
+\item{\code{maxF}}{Maximum length of patient follow-up. Typically should be Inf.}
 }}
 
 \examples{
 new("RCurve", type="ExampleCurve",PDF="pdf_fn_name", CDF="CDF_fn_name",
   RF="random_draw_fn_name", inverse="inv_fn_name", paramno=2, pnames=c('param1','param2'),
   pvalue=list(1,2), 
-N=100,Nactive=50,Ncontrol=40, Ratio=50/40, Length = 5)
+N=100,Nactive=50,Ncontrol=40, Ratio=50/40, Length = 5, maxF = Inf)
 }
 \author{
 James Bell

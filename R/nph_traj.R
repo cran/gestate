@@ -23,6 +23,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Dfunction_control","Dfu
 #' @param max_assessment Maximum assessment time to calculate properties up to
 #' @param landmark (Optional) Time in months of landmark analysis, if required. Otherwise NULL (Not calculated; default).
 #' @param RMST (Optional) Restriction time for RMST analysis in months, if required. Otherwise NULL (Not calculated; default).
+#' @param HRbound (Optional) Specify HR value to test landmark significance against. Default is 1 (superiority testing). Values above 1 would be non-inferiority.
 #' @param alpha1 One-sided alpha required, as a decimal. 0.025 by default. Requires 0 < alpha1 <= 0.5.
 #' @param required_power (Optional) Power required for estimated sample sizes. Otherwise NULL (not calculated; default).
 #' @param detailed_output Boolean to require a more detailed output table, including Peto LogHR, expectations of various quantities and alternative power calculations. Default = FALSE (detailed outputs omitted).
@@ -93,7 +94,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Dfunction_control","Dfu
 #' @examples nph_traj(max_assessment=100,rcurve=LinearR(12,100,100),control_ecurve=Weibull(100,1),
 #' active_ecurve=Weibull(250,0.8))
 #' @export
-nph_traj <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),control_dcurve=Blank(),rcurve,max_assessment=100,landmark=NULL,RMST=NULL,alpha1=0.025,required_power=NULL,detailed_output=FALSE){
+nph_traj <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),control_dcurve=Blank(),rcurve,max_assessment=100,landmark=NULL,RMST=NULL,HRbound=1,alpha1=0.025,required_power=NULL,detailed_output=FALSE){
   # Perform checks of inputs
   # Firstly, check for missing arguments
   if(missing(active_ecurve))stop("Please specify the active event curve using the 'active_ecurve' argument. Please note that this should be a Curve object; Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
@@ -114,6 +115,7 @@ nph_traj <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),control_
   #Positive continuous
   if(!is.numeric(alpha1) || alpha1 <= 0 || alpha1 > 0.5 ) stop("Please specify a positive one-sided alpha less than 0.5 using the 'alpha1' argument.")
   if(!is.null(required_power) && (!(required_power > 0) | !(required_power < 1) )) stop("Sample size for a required power is specified, but power is not a value between 0 and 1 (exclusive).")
+  if(!is.numeric(HRbound) || HRbound <= 0) stop("Please specify a positive value of HR to test significance against (default is 1, for superiority testing).")
   #Boolean
   if(!is.logical(detailed_output))stop("Error: detailed_output argument must be boolean: default=FALSE (simplified output).")
 
@@ -346,13 +348,13 @@ nph_traj <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),control_
   output$Peto_LogHR <- round((O2-E2)/output$Variance,4)
   output$V_Pike_Peto <- round(1/(1/E1+1/E2),3)
   output$Variance <- round(output$Variance,3)
-  output$Schoenfeld_Power <- round(events2power(events=O1+O2,HR=HR,ratio=N_active/N_control,alpha1=alpha1),4)
-  output$Event_Prop_Power <- round(events2power(events=O1+O2,HR=HR,ratio=O2/O1,alpha1=alpha1),4)
+  output$Schoenfeld_Power <- round(events2power(events=O1+O2,HR=HR,ratio=N_active/N_control,alpha1=alpha1,HRbound=HRbound),4)
+  output$Event_Prop_Power <- round(events2power(events=O1+O2,HR=HR,ratio=O2/O1,alpha1=alpha1,HRbound=HRbound),4)
   output$Z_Power <- round(ZV2power(Z=Z,V=1,alpha1=alpha1),4)
-  output$Frontier_Power <- round(frontierpower(events=O1+O2,HR=HR,Eratio=O2/O1,Rratio=N_active/N_control,startpower=output$Event_Prop_Power,alpha1=alpha1,iter=10),4)
+  output$Frontier_Power <- round(frontierpower(events=O1+O2,HR=HR,Eratio=O2/O1,Rratio=N_active/N_control,startpower=output$Event_Prop_Power,alpha1=alpha1,HRbound=HRbound,iter=10),4)
 
   if(!is.null(required_power) && required_power>0 && required_power <1){
-    Estimated_SS <- ceiling((N_active+N_control)*power2events(power=required_power,HR=HR,ratio=N_active/N_control,alpha1=alpha1)/(O1+O2))
+    Estimated_SS <- ceiling((N_active+N_control)*power2events(power=required_power,HR=HR,ratio=N_active/N_control,alpha1=alpha1,HRbound=HRbound)/(O1+O2))
     output <- cbind(output,Estimated_SS)
   }
 
@@ -402,6 +404,6 @@ nph_traj <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),control_
   if(!detailed_output){
     output <- subset(output, select = -c(E_Events_Active, E_Events_Control,HR_CI_Upper,HR_CI_Lower,Peto_LogHR,Expected_Z,Expected_P,Log_Rank_Stat,Variance,V_Pike_Peto,Event_Ratio,Event_Prop_Power,Z_Power))
   }
-  outputlist <- list(active_ecurve=active_ecurve,control_ecurve=control_ecurve,active_dcurve=active_dcurve,control_dcurve=control_dcurve,rcurve=rcurve,Summary=output)
+  outputlist <- list(active_ecurve=active_ecurve,control_ecurve=control_ecurve,active_dcurve=active_dcurve,control_dcurve=control_dcurve,rcurve=rcurve,HRbound=HRbound,Summary=output)
   return(outputlist)
 }

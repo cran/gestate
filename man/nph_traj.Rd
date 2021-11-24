@@ -13,6 +13,7 @@ nph_traj(
   max_assessment = 100,
   landmark = NULL,
   RMST = NULL,
+  HRbound = 1,
   alpha1 = 0.025,
   required_power = NULL,
   detailed_output = FALSE
@@ -34,6 +35,8 @@ nph_traj(
 \item{landmark}{(Optional) Time in months of landmark analysis, if required. Otherwise NULL (Not calculated; default).}
 
 \item{RMST}{(Optional) Restriction time for RMST analysis in months, if required. Otherwise NULL (Not calculated; default).}
+
+\item{HRbound}{(Optional) Specify HR value to test landmark significance against. Default is 1 (superiority testing). Values above 1 would be non-inferiority.}
 
 \item{alpha1}{One-sided alpha required, as a decimal. 0.025 by default. Requires 0 < alpha1 <= 0.5.}
 

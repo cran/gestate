@@ -235,7 +235,7 @@ GGamma <- function(theta, eta, rho){
 #' @examples LinearR(rlength=12,Nactive=100,Ncontrol=100)
 #' @export
 LinearR <- function(rlength,Nactive,Ncontrol){
-  new("RCurve",type="LinearR",PDF="linear_recruitPDF",CDF="linear_recruit",RF="linear_sim",inverse="NULL",paramno=1,pnames="rlength",pvalue=list(rlength),N=Nactive+Ncontrol,Nactive=Nactive,Ncontrol=Ncontrol,Ratio=Nactive/Ncontrol,Length=rlength)
+  new("RCurve",type="LinearR",PDF="linear_recruitPDF",CDF="linear_recruit",RF="linear_sim",inverse="NULL",paramno=1,pnames="rlength",pvalue=list(rlength),N=Nactive+Ncontrol,Nactive=Nactive,Ncontrol=Ncontrol,Ratio=Nactive/Ncontrol,Length=rlength,maxF=Inf)
 }
 
 #' InstantR RCurve constructor function
@@ -249,7 +249,7 @@ LinearR <- function(rlength,Nactive,Ncontrol){
 #' @examples InstantR(Nactive=100,Ncontrol=100)
 #' @export
 InstantR <- function(Nactive,Ncontrol){
-  new("RCurve",type="InstantR",PDF="NULL",CDF="instant_recruit",RF="instant_sim",inverse="NULL",paramno=1,pnames="Dummy",pvalue=list(0),N=Nactive+Ncontrol,Nactive=Nactive,Ncontrol=Ncontrol,Ratio=Nactive/Ncontrol,Length=0)
+  new("RCurve",type="InstantR",PDF="NULL",CDF="instant_recruit",RF="instant_sim",inverse="NULL",paramno=1,pnames="Dummy",pvalue=list(0),N=Nactive+Ncontrol,Nactive=Nactive,Ncontrol=Ncontrol,Ratio=Nactive/Ncontrol,Length=0,maxF=Inf)
 }
 
 #' PieceR RCurve constructor function
@@ -271,7 +271,7 @@ PieceR <- function(recruitment,ratio){
   N <- sum(rates*lengths)
   Nactive <- N*(ratio/(ratio+1))
   Ncontrol <- N-Nactive
-  new("RCurve",type="PieceR",PDF="piece_recruitPDF",CDF="piece_recruit",RF="piece_sim",inverse="NULL",paramno=2,pnames=c("lengths","rates"),pvalue=list(lengths,rates),N=N,Ratio=ratio,Nactive=Nactive,Ncontrol=Ncontrol,Length=sum(lengths))
+  new("RCurve",type="PieceR",PDF="piece_recruitPDF",CDF="piece_recruit",RF="piece_sim",inverse="NULL",paramno=2,pnames=c("lengths","rates"),pvalue=list(lengths,rates),N=N,Ratio=ratio,Nactive=Nactive,Ncontrol=Ncontrol,Length=sum(lengths),maxF=Inf)
 }
 
 #' PieceR RCurve constructor function
@@ -294,6 +294,6 @@ PieceRMaxF <- function(recruitment,ratio,maxF){
   N <- sum(rates*lengths)
   Nactive <- N*(ratio/(ratio+1))
   Ncontrol <- N-Nactive
-  new("RCurve",type="PieceR",PDF="piece_recruitPDFMaxF",CDF="piece_recruitMaxF",RF="piece_simMaxF",inverse="NULL",paramno=3,pnames=c("lengths","rates","maxF"),pvalue=list(lengths,rates,maxF),N=N,Ratio=ratio,Nactive=Nactive,Ncontrol=Ncontrol,Length=sum(lengths))
+  new("RCurve",type="PieceR",PDF="piece_recruitPDFMaxF",CDF="piece_recruitMaxF",RF="piece_simMaxF",inverse="NULL",paramno=3,pnames=c("lengths","rates","maxF"),pvalue=list(lengths,rates,maxF),N=N,Ratio=ratio,Nactive=Nactive,Ncontrol=Ncontrol,Length=sum(lengths),maxF=maxF)
 }
 

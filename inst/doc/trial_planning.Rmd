@@ -161,15 +161,17 @@ To control the one-sided type I error for power calculations, the 'alpha1' argum
 
 An additional feature of nph_traj is it can estimate the required number of patients to achieve a given power at a given time point (using Schoenfeld), assuming all parameters remain constant (only the rate of recruitment changes to allow patient number to change in the existing specified time frame). This can be requested by setting the 'required_power' argument to the required decimal, e.g. 0.9 for 90% power. For sample size calculations it is strongly recommended to only use this as a guide of the next set of parameters to try, and to rerun the calculation. This is because unless the number is similar to that in the existing RCurve, it will typically require changing the recruitment length to reach the new number, and that will result in changes to the calculation.
 
-It is also possible to get more detailed outputs by specifying 'detailed_output=TRUE'. This includes several additional quantities required by the calculations or derived from them. Full details may be found in the documentation of the nph_traj function (via e.g. ?nph_traj). 
+It is also possible to get more detailed outputs by specifying 'detailed_output=TRUE'. This includes several additional quantities required by the calculations or derived from them. Full details may be found in the documentation of the nph_traj function (via e.g. ?nph_traj).
+
+Version 1.4.1 onwards supports non-inferiority trials for power calculations based on hazard ratio (only). The optional 'HRbound' argument can be used to specify the HR to be used as the non-inferiority bound. By default this is 1, i.e. a superiority trial. Values greater than 1 should be specified for non-inferiority settings. Values less than 1 could be used for trials looking to show evidence that they are at least a certain amount better than the comparator. Note that any requested power calculations based on a log rank Z test, or for RMST/landmark analyses will still be on the basis of superiority.
 
 ```{r}
 # Define exponential distributions for active and control arms, with HR of 0.7
 censorCurveA <- Exponential(lambda=0.001)
 censorCurveC <- Exponential(lambda=0.002)
 
-# Run nph_traj with default settings to calculate expected properties up to 10 months
-output1 <- nph_traj(active_ecurve=activeCurve,control_ecurve=controlCurve,active_dcurve=censorCurveA,control_dcurve=censorCurveC,rcurve=rcurve3,max_assessment=10,detailed_output = TRUE,required_power = 0.9)
+# Run nph_traj with default settings to calculate expected properties up to 10 months in a NI setting against a HR bound of 1.3.
+output1 <- nph_traj(active_ecurve=activeCurve,control_ecurve=controlCurve,active_dcurve=censorCurveA,control_dcurve=censorCurveC,rcurve=rcurve3,max_assessment=10,HRbound=1.3,detailed_output = TRUE,required_power = 0.9)
 # Display output
 output1
 
@@ -325,7 +327,7 @@ A final analysis example is:
 
 ```{r}
 # Perform log-rank test, Cox regression, landmark analysis and RMST analysis on simulated data using parallel processing.
-analysis2 <- analyse_sim(data=simulation2, RMST=10, landmark=10, parallel_cores=2)
+analysis2 <- analyse_sim(data=simulation2, RMST=10, landmark=10, parallel_cores=1)
 head(analysis2)
 
 ```

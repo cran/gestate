@@ -179,7 +179,6 @@ piece_simMaxF <- function(n,lengths,rates,maxF){
   cumnumbers <- cumsum(numbers)
   locations <- findInterval(rand,cumnumbers)
   output <- cumtime[locations]+(rand-cumnumbers[locations])/rates[locations+1]
-  output <- pmin(output,maxF)
   return(output)
 }
 

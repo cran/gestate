@@ -4,7 +4,7 @@
 \alias{power2events}
 \title{Calculate Schoenfeld or Event Proportion based event numbers from power}
 \usage{
-power2events(power, HR, ratio = 1, alpha1 = 0.025)
+power2events(power, HR, ratio = 1, alpha1 = 0.025, HRbound = 1)
 }
 \arguments{
 \item{power}{Desired power (decimal).}
@@ -14,6 +14,8 @@ power2events(power, HR, ratio = 1, alpha1 = 0.025)
 \item{ratio}{Randomisation ratio (Schoenfeld), or event ratio (event proportion method). Default=1.}
 
 \item{alpha1}{1-sided alpha. Default=0.025.}
+
+\item{HRbound}{HRvalue to test against. Default=1 (superiority).}
 }
 \value{
 Required event number

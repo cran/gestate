@@ -11,6 +11,7 @@ frontierpower(
   Rratio = 1,
   startpower = 0.5,
   alpha1 = 0.025,
+  HRbound = 1,
   iter = 10
 )
 }
@@ -26,6 +27,8 @@ frontierpower(
 \item{startpower}{Initial estimate of power. Default=0.5.}
 
 \item{alpha1}{1-sided alpha. Default=0.025.}
+
+\item{HRbound}{HRvalue to test against. Default=1 (superiority).}
 
 \item{iter}{Number of iterations to perform. Default=10.}
 }

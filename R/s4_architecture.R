@@ -40,14 +40,15 @@ setClass("Curve",
 #' @slot paramno Number of parameters required to define the distribution.
 #' @slot pnames Names of parameters defining the distribution. Should be a vector of length paramno.
 #' @slot pnames Values of parameters defining the distribution. Should be a list of length paramno.
+#' @slot maxF Maximum length of patient follow-up. Typically should be Inf.
 #' @author James Bell
 #' @examples new("RCurve", type="ExampleCurve",PDF="pdf_fn_name", CDF="CDF_fn_name",
 #'   RF="random_draw_fn_name", inverse="inv_fn_name", paramno=2, pnames=c('param1','param2'),
 #'   pvalue=list(1,2), 
-#' N=100,Nactive=50,Ncontrol=40, Ratio=50/40, Length = 5)
+#' N=100,Nactive=50,Ncontrol=40, Ratio=50/40, Length = 5, maxF = Inf)
 #' @export
 setClass("RCurve",
-         slots = list(N = "numeric", Nactive = "numeric", Ncontrol = "numeric", Ratio = "numeric",Length = "numeric"),contains="Curve")
+         slots = list(N = "numeric", Nactive = "numeric", Ncontrol = "numeric", Ratio = "numeric",Length = "numeric",maxF="numeric"),contains="Curve")
 
 ######################################################################################################
 # S4 methods for the 'Curve' and 'RCurve' objects. These are mostly simple get/set methods for properties
@@ -536,6 +537,27 @@ setMethod(f="getLength", signature="RCurve",definition=function(theObject){
   return(theObject@Length)
 })
 
+#'Method for returning maximum duration of patient follow-up from a RCurve
+#'
+#' This returns the RCurve maximum patient follow-up
+#' @param theObject The name of the RCurve Object
+#' @examples getMaxF(LinearR(12,100,100))
+#' @export
+# Create a method for RCurve to get the recruitment ratio
+setGeneric(name="getMaxF", def=function(theObject) {
+  standardGeneric("getMaxF")
+})
+
+#'Method for returning maximum duration of patient follow-up from a RCurve
+#'
+#' This returns the RCurve maximum patient follow-up
+#' @param theObject The name of the RCurve Object
+#' @examples getMaxF(LinearR(12,100,100))
+#' @export
+setMethod(f="getMaxF", signature="RCurve",definition=function(theObject){
+  return(theObject@maxF)
+})
+
 #'Method for calculating expected number of recruited patients at a given time from an RCurve
 #'
 #' This calculates the expected number of recruited patients at a given time based upon an RCurve
@@ -556,7 +578,7 @@ setGeneric(name="getPatients", def=function(theObject,...) {
 #' @export
 setMethod(f="getPatients", signature="RCurve",definition=function(theObject,x){
   #Note, assess is a dummy variable used for compatibility with the function, which needs q and assess
-  assess <- 100000 
+  assess <- x+0.00001 
   q <- assess-x 
   output <- theObject@N*(1-eval(parse(text=getAssessCDFfunction(theObject))))
   return(output)

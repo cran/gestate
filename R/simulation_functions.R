@@ -1,4 +1,4 @@
-if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","Assess","RCTime","CTime","Iter"))
+if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","Assess","RCTime","CTime","Iter","Max_F"))
 
 #######################################################################################################
 #'Perform simulations of time-to-event data using arbitrary event, censoring and recruitment distributions.
@@ -33,6 +33,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","
 #'  \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed)}
 #'  \item{"Rec_Time"}{ Simulated (trial) time of recruitment}
 #'  \item{"Assess"}{ Prespecified (trial) time of assessment}
+#'  \item{"Max_F"}{ Prespecified maximum patient follow-up time}
 #'  \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed)}
 #' }
 #' @author James Bell
@@ -81,7 +82,7 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
     seed <- as.numeric(Sys.time())
   }
   set.seed(seed)
-  columns <- 9
+  columns <- 10
   nactive <- ceiling(getNactive(rcurve))
   ncontrol <- floor(getNcontrol(rcurve))
   n <- nactive+ncontrol
@@ -118,8 +119,9 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
   } else if(nactive <= 0) {output <- controlmatrix}
 
   # Create recruitment time
-  colnames(output) <- c("Time","Censored","Trt","Iter","ETime", "CTime", "Rec_Time", "Assess", "RCTime")
+  colnames(output) <- c("Time","Censored","Trt","Iter","ETime", "CTime", "Rec_Time", "Assess","Max_F", "RCTime")
   output[,"Rec_Time"] <- random_draw(rcurve,n*iterations)
+  output[,"Max_F"] <- getMaxF(rcurve)
   output <- update_times_assess(output,assess)
   output <- output[output[,"RCTime"]>=0,]
   # This section handles event fixing and choice of output formatting
@@ -173,6 +175,7 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
 #'  \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed)}
 #'  \item{"Rec_Time"}{ Simulated (trial) time of recruitment}
 #'  \item{"Assess"}{ Prespecified (trial) time of assessment}
+#'  \item{"Max_F"}{ Prespecified maximum patient follow-up time}
 #'  \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed)}
 #'  \item{"Stratum"}{ Stratum number. Column name will be the value of the stratum_name argument.)}
 #' }
@@ -269,7 +272,7 @@ simulate_trials_strata <- function(stratum_probs,active_ecurve,control_ecurve,ac
 #Function here just to avoid repetition in simulate_trials, set_event_number and set_assess_time
 update_times_assess <- function(data,assess){
     data[,"Assess"] <- assess
-    data[,"RCTime"] <- data[,"Assess"] - data[,"Rec_Time"]
+    data[,"RCTime"] <- pmin(data[,"Assess"] - data[,"Rec_Time"],data[,"Max_F"])
     data[,"Time"] <- pmin.int(data[,"ETime"],data[,"CTime"],data[,"RCTime"])
     data[,"Censored"] <- 1
     data[data[,"Time"] == data[,"ETime"],"Censored"] <- 0
@@ -337,7 +340,7 @@ set_event_number <- function(data,events,output_type=c("input","matrix","list"),
   newassess <- rep(NA,maxiter)
   for(i in 1:maxiter){
     iterdata <- data1[[i]]
-    possibles <- iterdata[iterdata[,"ETime"]<iterdata[,"CTime"],]
+    possibles <- iterdata[iterdata[,"ETime"]<pmin(iterdata[,"CTime"],iterdata[,"Max_F"]),]
     sorted <- sort(possibles[,"ETime"]-possibles[,"RCTime"])
     sortE <- length(sorted)
     if(sortE <= events){
@@ -356,7 +359,7 @@ set_event_number <- function(data,events,output_type=c("input","matrix","list"),
   out <- rbind(do.call("rbind",results))
   out <- out[out[,"RCTime"]>=0,]
   if(!detailed_output){
-    out <- subset(out,select=-c(ETime,Rec_Time,Assess,RCTime,CTime))
+    out <- subset(out,select=-c(ETime,Rec_Time,Assess,RCTime,CTime,Max_F))
   }
   if(output_type=="list"){
     if(input=="single"){
@@ -416,7 +419,7 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
       data <- update_times_assess(data=data,assess=time)
       data <- data[data[,"RCTime"]>=0,]
       if(!detailed_output){
-        data <- subset(data,select=-c(ETime,Rec_Time,Assess,RCTime,CTime))
+        data <- subset(data,select=-c(ETime,Rec_Time,Assess,RCTime,CTime,Max_F))
       }
       return(data)
     } else {
@@ -449,7 +452,7 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
       data <- update_times_assess(data=data,assess=time)
       data <- data[data[,"RCTime"]>=0,]
       if(!detailed_output){
-        data <- subset(data,select=-c(ETime,Rec_Time,Assess,RCTime,CTime))
+        data <- subset(data,select=-c(ETime,Rec_Time,Assess,RCTime,CTime,Max_F))
       }
       if(output_type=="list"){
         if(input=="single"){return(list(data))}
@@ -610,9 +613,9 @@ analyse_sim <- function(data, LR = TRUE, RMST = NA, landmark = NA, stratum="",pa
       }
     }else{
       if(stratum==""){
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_analysis")%do% RMST_LM_analysis(i,data,RMST,landmark)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.packages="gestate")%do% RMST_LM_analysis(i,data,RMST,landmark)
       } else {
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_cov_analysis")%do% RMST_LM_cov_analysis(i,data,RMST,landmark,stratum)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.packages="gestate")%do% RMST_LM_cov_analysis(i,data,RMST,landmark,stratum)
       }
     }
     if(!is.matrix(outRMST)){outRMST <- t(outRMST)}
@@ -626,6 +629,53 @@ analyse_sim <- function(data, LR = TRUE, RMST = NA, landmark = NA, stratum="",pa
     out <- if(LR){cbind(out,outRMST)} else{outRMST}
   }
   return(out)
+}
+
+
+
+
+################################################################################
+# survfit_fast ; Helper function for KM estimate production
+# Fast function for KM estimate production. Rate-limiting-step is the table call.
+# Should replicate output of survfit for KM estimate production
+#  time:   	time of events
+#  events:	event occurrence data 0 for censoring, 1 for event
+################################################################################
+
+
+
+
+#######################################################################################################
+#'Create lifetable quickly
+#'
+#' Simple, fast function to generate basic lifetables. No error checking is performed.
+#' @param time Vector of event/censoring times
+#' @param events Vector of indicators for whether each time is an event (1) or a censoring (0). Must be same length vector as time argument.
+#' @return Returns a list format lifetable with the following entries:
+#' \itemize{
+#'  \item{"n"}{Number of patients}
+#'  \item{"time"}{Vector of times}
+#'  \item{"n.risk"}{Vector of numbers of patients at risk at each time}
+#'  \item{"n.event"}{Vector of numbers of patients with an event at each time}
+#'  \item{"n.censor"}{Vector of numbers of patients censored at each time}
+#'  \item{"surv"}{Vector of estimates of Survival function at each time}
+#'  \item{"se"}{Vector of standard errors of estimates of Survival function at each time}
+#' }
+#' @author James Bell
+#' @examples survfit_fast(c(1,2,3,3,4,5),c(1,0,1,1,0,1))
+#' @export
+survfit_fast <- function (time,events){
+   n      <- length(time)
+   temp   <- table(factor(time),factor(events,levels=0:1))
+   nevent <- as.vector(temp[, 2])
+   ncens  <- as.vector(temp[, 1])
+   times  <- as.numeric(row.names(temp))
+   nrisk  <- n - c(0,cumsum(nevent+ncens)[-length(nevent)])
+   trisk  <- ifelse(nrisk == 0, 1, nrisk)
+   surv   <- cumprod((trisk - nevent)/trisk)
+   se     <- surv*sqrt(cumsum(nevent/(trisk * (trisk - nevent))))
+   temp   <- list(n = n, time = times, n.risk = nrisk, n.event = nevent, n.censor = ncens, surv = surv,se = se)
+   return(temp)
 }
 
 ################################################################################
@@ -686,20 +736,6 @@ RMST_LM_analysis <- function(i,data,restriction=NA,landmark=NA){
       rmst_var  <- sum(cumsum(rev(areas[-1]))^2 * rev(c(var1, 0))[-1])
       rmst_se   <- sqrt(rmst_var)
       return(c(rmst, rmst_se, rmst_var))
-    }
-
-    # Fast function for KM estimate production. Rate-limiting-step is the table call.
-    survfit_fast <- function (time,events){
-      n      <- length(time)
-      temp   <- table(factor(time),factor(events,levels=0:1))
-      nevent <- as.vector(temp[, 2])
-      ncens  <- as.vector(temp[, 1])
-      times  <- as.numeric(row.names(temp))
-      nrisk  <- n - c(0,cumsum(nevent+ncens)[-n])
-      trisk  <- ifelse(nrisk == 0, 1, nrisk)
-      surv   <- cumprod((trisk - nevent)/trisk)
-      se     <- surv*sqrt(cumsum(nevent/(trisk * (trisk - nevent))))
-      return(list(n = n, time = times, n.risk = nrisk, n.event = nevent, n.censor = ncens, surv = surv,se = se))
     }
 
     lm_analysis <- function(tab,landmark){
@@ -770,6 +806,7 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
 
   #Core function for calculating RMST with covariates. Supports class covariates. 
   rmstcov <- function (time, status, arm, restriction, covariates){
+
     #rmstcovreg is the inner function used for performing the regression for calculating RMST with covariates
     rmstcovreg <- function (y, status, x, arm, restriction){
 
@@ -797,8 +834,8 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
         n0  <- length(ev0)
         yv0table <- table(yv0)
 
-        w1 <- ev1/rep(survfit(Surv(yv1, 1 - ev1) ~ 1)$surv, yv1table)
-        w0 <- ev0/rep(survfit(Surv(yv0, 1 - ev0) ~ 1)$surv, yv0table)
+        w1 <- ev1/rep(survfit_fast(yv1, 1 - ev1)$surv, yv1table)
+        w0 <- ev0/rep(survfit_fast(yv0, 1 - ev0)$surv, yv0table)
 
         Beta <- lm(c(yv1, yv0) ~ rbind(xmat1, xmat0) - 1, weights = c(w1, w0))$coef
         score1 <- xmat1*w1*(yv1-as.vector(xmat1 %*% Beta))
@@ -859,15 +896,14 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
       colnames(output) <- levs[-1]
       return(output)
     }
-
-    if(is.null(ncol(covariates))|| ncol(covariates) == 1){
+    ncov <- ncol(covariates)
+    if(is.null(ncov)|| ncov == 1){
       if(is.factor(covariates)){
         covariates <- unstacker(covariates)
       }
     } else{
-      size <- ncol(covariates)
-      tempcovs <- vector("list", length = size)
-      for(i in 1:size){
+      tempcovs <- vector("list", length = ncov)
+      for(i in 1:ncov){
         if(is.factor(covariates[,i])){
           tempcovs[[i]] <- unstacker(covariates[,i])
         } else {tempcovs[[i]] <- covariates[,i]}
@@ -887,20 +923,6 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
 
   #Core landmark with covariates calculation function
   lm_cov <- function(time,status,arm,stratum,landmark){
-    # Fast function for KM estimate production. Rate-limiting-step is the table call.
-    survfit_fast <- function (time,events){
-      n      <- length(time)
-      temp   <- table(factor(time),factor(events,levels=0:1))
-      nevent <- as.vector(temp[, 2])
-      ncens  <- as.vector(temp[, 1])
-      times  <- as.numeric(row.names(temp))
-      nrisk  <- n - c(0,cumsum(nevent+ncens)[-n])
-      trisk  <- ifelse(nrisk == 0, 1, nrisk)
-      surv   <- cumprod((trisk - nevent)/trisk)
-      se     <- surv*sqrt(cumsum(nevent/(trisk * (trisk - nevent))))
-      temp   <- list(n = n, time = times, n.risk = nrisk, n.event = nevent, n.censor = ncens, surv = surv,se = se)
-      return(temp)
-    }
 
     lm_analysis <- function(ft,landmark){
       if(is.na(ft$time[1]>0) | ft$time[1] > landmark){
@@ -960,7 +982,6 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
   } else {lm <- rep(NA,9)}
   return(c(rmst,lm))
 }
-
 
 
 
