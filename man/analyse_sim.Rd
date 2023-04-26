@@ -10,7 +10,12 @@ analyse_sim(
   RMST = NA,
   landmark = NA,
   stratum = "",
-  parallel_cores = 1
+  parallel_cores = 1,
+  Time = "Time",
+  Event = "Censored",
+  censoringOne = TRUE,
+  Trt = "Trt",
+  Iter = "Iter"
 )
 }
 \arguments{
@@ -25,6 +30,16 @@ analyse_sim(
 \item{stratum}{Specify name of column of a stratification factor and turn on stratified (LR/LM) and covariate-adjusted (Cox/RMST) analysis. By default, "", and no stratification.}
 
 \item{parallel_cores}{Positive integer specifying number of cores to use. If 1 specified then no parallel processing. Default=1 (no parallel processing).}
+
+\item{Time}{String specifying the name of the time column. Default="Time"}
+
+\item{Event}{String specifying the name of the censoring/event column. Default="Censored" (and by default it is a censoring column unless censoringOne=FALSE)}
+
+\item{censoringOne}{Boolean specifying whether censoring is denoted in the censoring/event column by a one (TRUE) or zero (FALSE). Default=TRUE (censorings denoted by 1, events by 0)}
+
+\item{Trt}{String specifying the name of the treatment column. Default="Trt"}
+
+\item{Iter}{String specifying the name of the iterations column. Default="Iter"}
 }
 \value{
 Returns a table with one row per simulation. Table contains the following columns:
@@ -67,7 +82,7 @@ If a stratum is specified, it will be included as a covariate in Cox and RMST an
 Strata values are handled as factors, so continuous covariates are not supported.\cr
 Analysis is typically the slowest part of simulation studies, so parallel processing using the doParallel package is built in.
 Parallel processing is enabled by setting the number of cores in the "parallel_cores" argument.
-Use of parallel processing is recommended for largescale (e.g. 100,000 iteration) simulations. 
+Use of parallel processing is recommended for largescale (e.g. 100,000 iteration) simulations.
 To avoid unnecessary issues, ensure that the number of cores specified does not exceed number of threads provided by hardware.
 }
 \examples{
@@ -87,7 +102,7 @@ example_strat_analysis <- analyse_sim(data=example_strat_sim,RMST=15,landmark=15
 Uno H, Claggett B, Tian L, Inoue E, Gallo P, Miyata T, Schrag D, Takeuchi M, Uyama Y, Zhao L,
   Skali H, Solomon S, Jacobus S, Hughes M, Packer M, Wei LJ. Moving beyond the hazard ratio in
   quantifying the between-group difference in survival analysis. Journal of clinical Oncology 2014,32, 2380-2385.
-Tian L, Zhao L, Wei LJ. Predicting the restricted mean event time with the subjects baseline covariates in survival analysis. 
+Tian L, Zhao L, Wei LJ. Predicting the restricted mean event time with the subjects baseline covariates in survival analysis.
   Biostatistics 2014, 15, 222-233.
 }
 \author{

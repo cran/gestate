@@ -1,7 +1,7 @@
 library(testthat)
 library(gestate)
 library(survival)
-context("Loading examples 1")
+context("Loading examples 1 (Curve objects)")
 a <- Weibull(alpha=100,beta=1)
 b <- Lognormal(mu=4,sigma=1.5)
 c <- Exponential(lambda=0.01)
@@ -47,6 +47,8 @@ test_that("S4 architecture and constructors working as intended", {
   expect_equal(evaluateInvfunction(g, evaluateCDFfunction(g,4)),tolerance=0.001,4)
   expect_equal(getMaxF(e), Inf)
   expect_equal(getMaxF(n), 13)
+  set.seed(1234)
+  expect_equal (random_draw(a,1), 217.4162,tolerance=0.001)
 })
 
 context("Power Tests")
@@ -60,7 +62,8 @@ test_that("Power/Event Calculators working as intended", {
   expect_equal(events2power(events=100,HR=0.75*1.3,ratio=0.5,HRbound=1.3),tolerance=0.000001,events2power(events=100,HR=0.75,ratio=0.5))
   expect_equal(frontierpower(events=100,HR=0.75,startpower=0.27,Rratio=0.5,Eratio=0.35,iter=20),tolerance=0.000001,0.2148509)
 })
-context("Loading examples 2")
+
+context("Loading examples 2 (nph_traj outputs)")
 aa <- nph_traj(active_ecurve=a,control_ecurve=b,active_dcurve=d,control_dcurve=d,rcurve=f,max_assessment=2)
 bb <- nph_traj(active_ecurve=a,control_ecurve=b,active_dcurve=d,control_dcurve=d,rcurve=f,max_assessment=30,RMST=20,landmark=20,detailed_output=TRUE,required_power=0.9)
 
@@ -94,28 +97,43 @@ test_that("nph_traj is numerically correct", {
   expect_equal(as.numeric(bb$Summary[30,25:32]),tolerance=0.0001,c(20,18.1269,17.4946,0.6323,0.5904,1.071,0.187,0))
   expect_equal(as.numeric(bb$Summary[30,33:41]),tolerance=0.0001,c(20,0.8187,0.7484,0.0703,0.0387,0.0308,0.0495,1.4203,0.2947))
 })
-context("Loading examples 3")
+
+context("Loading examples 3 (simulated data sets)")
+#Simulated datasets
 cc <- simulate_trials(active_ecurve=a,control_ecurve=b,active_dcurve=d,control_dcurve=d,rcurve=f,assess=30,iterations=10,seed=1234,detailed_output=FALSE)
+cca <- simulate_trials(active_ecurve=a,control_ecurve=b,active_dcurve=d,control_dcurve=d,rcurve=f,assess=30,iterations=10,seed=1234,detailed_output=FALSE,Event="WeirdName",censoringOne=FALSE)
 dd <- simulate_trials(active_ecurve=a,control_ecurve=b,active_dcurve=d,control_dcurve=d,rcurve=f,assess=30,iterations=10,seed=1234,detailed_output=TRUE)
 ee <- simulate_trials(active_ecurve=a,control_ecurve=b,active_dcurve=d,control_dcurve=d,rcurve=f,assess=30,iterations=10,seed=1234,output_type="list")
 ff <- simulate_trials(active_ecurve=a,control_ecurve=b,active_dcurve=d,control_dcurve=d,rcurve=f,assess=30,iterations=10,seed=1234,detailed_output=TRUE,fix_events=100,output_type="list")
+ffa <- simulate_trials(active_ecurve=a,control_ecurve=b,active_dcurve=d,control_dcurve=d,rcurve=f,assess=30,iterations=10,seed=1234,detailed_output=TRUE,fix_events=100,output_type="list",censoringOne=FALSE,Event="Event")
 gg <- simulate_trials(active_ecurve=a,control_ecurve=b,active_dcurve=d,control_dcurve=d,rcurve=f,assess=30,iterations=10,seed=1234,detailed_output=FALSE,fix_events=10,output_type="matrix")
 hh <- set_assess_time(data=ff,time=9,detailed_output=FALSE,output_type="matrix")
+hh1 <- set_event_number(data=ff,events=20,detailed_output=FALSE,output_type="matrix")
+hha <- set_assess_time(data=ffa,time=9,detailed_output=FALSE,output_type="matrix",Event="Event",censoringOne=FALSE)
+hh1a <- set_event_number(data=ffa,events=20,detailed_output=FALSE,output_type="matrix",Event="Event",censoringOne=FALSE)
 ii <- simulate_trials_strata(stratum_probs=c(0.5,0.5),active_ecurve=c(a,g),control_ecurve=b,rcurve=f,assess=30,iterations=10,seed=1234,detailed_output=FALSE,fix_events=10,output_type="matrix")
 jj <- simulate_trials_strata(stratum_probs=c(0.5,0.5),active_ecurve=c(a,g),control_ecurve=b,rcurve=f,assess=30,iterations=10,seed=1234,detailed_output=TRUE,output_type="list")
+jja <- simulate_trials_strata(stratum_probs=c(0.5,0.5),active_ecurve=c(a,g),control_ecurve=b,rcurve=f,assess=30,iterations=10,seed=1234,detailed_output=TRUE,output_type="list",Event="WeirdName",censoringOne=FALSE,stratum_name="UnusualStratum")
+
+context("Loading examples 4 (Analyses)")
+#Analyses of data sets
 ccc <- analyse_sim(cc,landmark=10)
-ccd <- analyse_sim(cc,RMST=10,landmark=10)
+ddd <- analyse_sim(cc,RMST=10,landmark=10)
+ddda <- analyse_sim(cca,RMST=10,landmark=10,Event="WeirdName",censoringOne=FALSE)
 eee <- analyse_sim(ee,LR=FALSE,RMST=10)
 jjj <- analyse_sim(jj,landmark=20,stratum="Stratum")
+jjja <- analyse_sim(jja,landmark=20,stratum="UnusualStratum",Event="WeirdName",censoringOne=FALSE)
 kkk <- analyse_sim(jj,LR=FALSE,RMST=20,stratum="Stratum")
+kkka <- analyse_sim(jja,LR=FALSE,RMST=20,stratum="UnusualStratum",Event="WeirdName",censoringOne=FALSE)
 cccc <- summarise_analysis(ccc)
 eeee <- summarise_analysis(eee)
 kkkk <- summarise_analysis(kkk)
 
-context("trial simulation structural testing")
+context("Trial simulation structural testing - simulate_trials")
 test_that("simulate_trials is generating correctly-formatted output", {
   expect_true(is.matrix(cc))
   expect_identical(colnames(cc),c("Time","Censored","Trt","Iter"))
+  expect_identical(colnames(cca),c("Time","WeirdName","Trt","Iter"))
   expect_identical(colnames(dd),c("Time","Censored","Trt","Iter","ETime","CTime","Rec_Time","Assess","Max_F","RCTime"))
   expect_equal(nrow(cc),3000)
   expect_true(max(cc[,"Time"]) < 30)
@@ -127,11 +145,29 @@ test_that("simulate_trials is generating correctly-formatted output", {
   expect_true(is.matrix(ff[[1]]))
   expect_equal(nrow(ff[[1]]),300)
   expect_identical(colnames(ff[[1]]),c("Time","Censored","Trt","ETime","CTime","Rec_Time","Assess","Max_F","RCTime"))
+  expect_identical(colnames(ffa[[1]]),c("Time","Event","Trt","ETime","CTime","Rec_Time","Assess","Max_F","RCTime"))
   expect_equal(sum(ff[[1]][,"Censored"],ff[[2]][,"Censored"],ff[[3]][,"Censored"],ff[[4]][,"Censored"],ff[[5]][,"Censored"],ff[[6]][,"Censored"],ff[[7]][,"Censored"],ff[[8]][,"Censored"],ff[[9]][,"Censored"],ff[[10]][,"Censored"]),2000)
+  expect_equal(sum(cc[,"Censored"]),sum(1-cca[,"WeirdName"]))
+  expect_equal(sum(ff[[3]][,"Censored"]),sum(1-ffa[[3]][,"Event"]))
   expect_true(is.matrix(gg))
   expect_equal(nrow(gg),2095)
   expect_identical(colnames(gg),c("Time","Censored","Trt","Iter"))
   expect_equal(sum(gg[,"Censored"]),1995)
+})
+
+context("Trial simulation structural testing - simulate_trials_strata")
+test_that("simulate_trials_strata is generating correctly-formatted output", {
+  expect_true(is.matrix(ii))
+  expect_equal(nrow(ii),2125)
+  expect_identical(colnames(ii),c("Time","Censored","Trt","Iter","Stratum"))
+  expect_equal(sum(ii[,"Censored"]),2025)
+  expect_true(max(ii[,"Time"]) < 30)
+  expect_true(is.list(jj))
+  expect_identical(colnames(jj[[1]]),c("Time","Censored","Trt","ETime","CTime","Rec_Time","Assess","Max_F","RCTime","Stratum"))
+  expect_identical(colnames(jja[[1]]),c("Time","WeirdName","Trt","ETime","CTime","Rec_Time","Assess","Max_F","RCTime","UnusualStratum"))
+  expect_equal(sum(jj[[3]][,"Censored"]),sum(1-jja[[3]][,"WeirdName"]))
+  expect_equal(nrow(jj[[1]]),300)
+  expect_true(max(jj[[1]][,"Time"]) < 30)
 })
 
 test_that("set_assess_times is working properly", {
@@ -142,26 +178,43 @@ test_that("set_assess_times is working properly", {
   expect_true(max(hh[,"Time"]) < 9)
 })
 
-test_that("simulate_trials_strata is working properly", {
-  expect_true(is.matrix(ii))
-  expect_equal(nrow(ii),2125)
-  expect_identical(colnames(ii),c("Time","Censored","Trt","Iter","Stratum"))
-  expect_equal(sum(ii[,"Censored"]),2025)
-  expect_true(max(ii[,"Time"]) < 30)
-  expect_true(is.list(jj))
-  expect_identical(colnames(jj[[1]]),c("Time","Censored","Trt","ETime","CTime","Rec_Time","Assess","Max_F","RCTime","Stratum"))
-  expect_equal(nrow(jj[[1]]),300)
-  expect_true(max(jj[[1]][,"Time"]) < 30)
+test_that("set_event_number is working properly", {
+  expect_true(is.matrix(hh1))
+  expect_equal(sum(1-hh1[,"Censored"]),200)
+  expect_equal(nrow(hh1),2793)
+  expect_identical(colnames(hh1),c("Time","Censored","Trt","Iter"))
 })
+
+test_that("set_assess_times is working properly with events not censored", {
+  expect_true(is.matrix(hha))
+  expect_equal(nrow(hha),2270)
+  expect_identical(colnames(hha),c("Time","Event","Trt","Iter"))
+  expect_equal(sum(hha[,"Event"]),123)
+  expect_true(max(hha[,"Time"]) < 9)
+})
+
+test_that("set_event_number is working properly with events not censored", {
+  expect_true(is.matrix(hh1a))
+  expect_equal(nrow(hh1a),2793)
+  expect_identical(colnames(hh1a),c("Time","Event","Trt","Iter"))
+  expect_equal(sum(hh1a[,"Event"]),200)
+})
+
 context("Simulation analysis structural testing")
 test_that("analyse_sim is working properly", {
   expect_true(is.matrix(ccc))
   expect_equal(nrow(ccc),10)
   expect_equal(nrow(jjj),10)
   expect_identical(colnames(ccc),c("HR","LogHR","LogHR_SE","HR_Z","HR_P","LR_Z","LR_P","Events_Active","Events_Control","LM_Time","LM_Active","LM_A_SE","LM_Control","LM_C_SE","LM_Delta","LM_D_SE","LM_Z","LM_P"))
-  expect_identical(colnames(ccd),c("HR","LogHR","LogHR_SE","HR_Z","HR_P","LR_Z","LR_P","Events_Active","Events_Control","RMST_Restrict","RMST_Active","RMST_A_SE","RMST_Control","RMST_C_SE","RMST_Delta","RMST_D_SE","RMST_Z","RMST_P","LM_Time","LM_Active","LM_A_SE","LM_Control","LM_C_SE","LM_Delta","LM_D_SE","LM_Z","LM_P"))
+  expect_identical(colnames(ddd),c("HR","LogHR","LogHR_SE","HR_Z","HR_P","LR_Z","LR_P","Events_Active","Events_Control","RMST_Restrict","RMST_Active","RMST_A_SE","RMST_Control","RMST_C_SE","RMST_Delta","RMST_D_SE","RMST_Z","RMST_P","LM_Time","LM_Active","LM_A_SE","LM_Control","LM_C_SE","LM_Delta","LM_D_SE","LM_Z","LM_P"))
   expect_identical(colnames(eee),c("RMST_Restrict","RMST_Active","RMST_A_SE","RMST_Control","RMST_C_SE","RMST_Delta","RMST_D_SE","RMST_Z","RMST_P"))
   expect_identical(colnames(jjj),c("HR","LogHR","LogHR_SE","HR_Z","HR_P","LR_Z","LR_P","Events_Active","Events_Control","LM_Time","LM_Active","LM_A_SE","LM_Control","LM_C_SE","LM_Delta","LM_D_SE","LM_Z","LM_P"))
+})
+
+test_that("analyse_sim is working properly with Events rather than Censorings", {
+  expect_identical(ddd,ddda)
+  expect_identical(jjj,jjja)
+  expect_identical(kkk,kkka)
 })
 
 test_that("summarise_analysis is working properly", {
@@ -177,20 +230,33 @@ test_that("numbers come out as expected", {
   expect_equal(as.numeric(kkkk),tolerance=0.001,c(10,20,17.983,0.438,17.396,0.366,0.5874,0.5708,0.2,0))
 })
 
-context("Loading examples 4")
+context("Loading examples 4 - event prediction")
+
 ep <- simulate_trials(active_ecurve=a,control_ecurve=a,active_dcurve=d,control_dcurve=d,rcurve=f,assess=30,iterations=1,seed=1234,detailed_output=FALSE)
+epa <- simulate_trials(active_ecurve=a,control_ecurve=a,active_dcurve=d,control_dcurve=d,rcurve=f,assess=30,iterations=1,seed=1234,detailed_output=FALSE,Event="Event",censoringOne=FALSE)
+ep_days <- ep
+ep_days[,"Time"] <- ep_days[,"Time"]*365.25/12
+
 lt1 <- summary(survfit(Surv(ep[,"Time"],1-ep[,"Censored"])~ 1,error="greenwood"))
 lt <- cbind(lt1$time,lt1$n.risk,lt1$surv,lt1$std.err)
 colnames(lt) <- c("Time","NAR","Survival","Std.Err")
+
 fit1a <- fit_KM(lt,type="Weibull",weighting=TRUE,Weights="NAR",Weight_power=1,startbeta=1,startsigma=1)
 fit1b <- fit_KM(lt,type="automatic",Survival="Survival",Time="Time",weighting=TRUE,Weights="NAR",Weight_power=1,startbeta=1,startsigma=1)
 fit1c <- fit_KM(lt,type="Lognormal",weighting=TRUE,Weights="NAR",Weight_power=1,startbeta=1,startsigma=1)
 fit2a <- fit_tte_data(ep,Event="Censored",censoringOne=TRUE,type="Weibull")
 fit2b <- fit_tte_data(ep,Time="Time",Event="Censored",censoringOne=TRUE)
 fit2c <- fit_tte_data(ep,Event="Censored",censoringOne=TRUE,type="Lognormal")
+fit2d <- fit_tte_data(ep,Event="Censored",censoringOne=TRUE,type="Exponential")
 
 predict2a <- event_prediction(data=ep,Event="Censored",censoringOne=TRUE,type="W",rcurve=f,max_time=100,discountHR=0.8,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
 predict2b <- event_prediction(data=ep,Event="Censored",censoringOne=TRUE,rcurve=f,max_time=100,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
+predict2c <- event_prediction(data=ep,Event="Censored",censoringOne=TRUE,type="E",rcurve=f,max_time=100,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
+predict2ca <- event_prediction(data=epa,type="E",rcurve=f,max_time=100,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
+
+predict3a <- event_prediction(data=ep_days,Event="Censored",censoringOne=TRUE,type="W",rcurve=f,max_time=100,discountHR=0.8,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="D")
+predict3b <- event_prediction(data=ep_days,Event="Censored",censoringOne=TRUE,rcurve=f,max_time=100,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="D")
+predict3c <- event_prediction(data=ep_days,Event="Censored",censoringOne=TRUE,type="E",rcurve=f,max_time=100,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="D")
 
 context("Curve fitting testing")
 test_that("Curve fit outputs are correct", {
@@ -200,18 +266,23 @@ test_that("Curve fit outputs are correct", {
   expect_named(fit2c,c("Curvetype","Parameters","VCov","Fit"))
   expect_named(fit1b$Parameters,c("Alpha","Beta"))
   expect_named(fit2b$Parameters,c("Alpha","Beta"))
+  expect_named(fit2d$Parameters,c("Lambda"))
   expect_identical(as.character(fit1a$Curvetype),"Weibull")
   expect_named(fit1a$VCov,c("Alpha_Var","Beta_Var","Covariance"))
   expect_named(fit2c$VCov,c("Mu_Var","Sigma_Var","Covariance"))
+  expect_named(fit2d$VCov,c("Lambda_Var"))
   expect_equal(as.numeric(fit1a$Parameters),tolerance=0.0001,c(151.6121059,0.8715328))
   expect_equal(as.numeric(fit1c$Parameters),tolerance=0.000001,c(5.211939,2.187701))
   expect_equal(as.numeric(fit2a$Parameters),tolerance=0.000001,c(119.4294831,0.9492834))
   expect_equal(as.numeric(fit2c$Parameters),tolerance=0.000001,c(5.052680,2.156809))
+  expect_equal(as.numeric(fit2d$Parameters),tolerance=0.000001,0.009111175)
   expect_equal(as.numeric(fit2a$VCov),tolerance=0.000001,c(913.66525215,0.01456038,-3.05446988))
   expect_equal(as.numeric(fit2c$VCov),tolerance=0.000001,c(0.09259047,0.05473513,0.05859155))
+  expect_equal(as.numeric(fit2d$VCov),tolerance=0.0000001,0.000001431268)
+  expect_identical(fit2b$VCov,fit2a$VCov)
 })
 
-context("event prediction testing")
+context("Event prediction testing")
 
 test_that("event_prediction is working properly", {
   expect_true(is.list(predict2a))
@@ -223,4 +294,68 @@ test_that("event_prediction is working properly", {
   expect_named(predict2a$Summary,c("Time","Patients","Predicted_Events","SE_Fitting","SE_Prediction","Prediction_Lower","Prediction_Upper","Conditioned_Events","Cond_SE_Fitting","Cond_SE_Prediction","Cond_Prediction_Lower","Cond_Prediction_Upper"))
   expect_equal(as.numeric(predict2a$Summary[50,]),tolerance=0.001,c(50,300,79.906,9.6301,12.2904,57,105,86.96,5.67,7.68,73,103))
   expect_equal(as.numeric(predict2b$Summary[50,]),tolerance=0.001,c(50,300,96.288,12.1419,14.5712,69,126,105.887,7.1687,9.0252,90,125))
+  expect_equal(as.numeric(predict2c$Summary[50,]),tolerance=0.001,c(50,300,98.983,10.5552,13.3178,74,126,108.314,4.5865,7.2716,95,123))
+  expect_identical(predict2a$Summary,predict3a$Summary)
+  expect_identical(predict2b$Summary,predict3b$Summary)
+  expect_identical(predict2c$Summary,predict3c$Summary)
+  expect_identical(predict2c,predict2ca)
+})
+
+
+context("Loading examples 5 - Prior event prediction")
+ prior1 <- create_tte_prior(curve=g,duration=20,events=40,Time="OddTime",Event="WeirdEvent",censoringOne=TRUE)
+ prior1a <- create_tte_prior(curve=g,duration=20,events=40)
+ prior2 <- create_tte_prior(curve=b,duration=30,events=100)
+ reverse_prior <- fit_tte_data(prior2,type="Lognormal")
+ main_prior <- epa[epa[,"Trt"]==1,]
+ data   <- epa[epa[,"Trt"]==2,]
+ test1 <- fit_tte_data_prior(data=data,priordata=main_prior)
+ test2 <- fit_tte_data_prior(data=data,priordata=main_prior,priorweight=0.5)
+ test3 <- fit_tte_data(epa,type="Weibull")
+
+ predict4 <- event_prediction_prior(data=data,priordata=main_prior,rcurve=f,max_time=100,discountHR=0.8,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
+ predict5 <- event_prediction_prior(data=data,priordata=main_prior,priorweight=0,rcurve=f,max_time=100,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
+ predict5a <- event_prediction(data=data,type="W",rcurve=f,max_time=100,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
+ predict6 <- event_prediction_prior(data=data,priordata=main_prior,priorweight=0.5,rcurve=f,max_time=100,cond_Time=30,cond_Events=70,cond_NatRisk=230,units="M")
+
+context("Prior event prediction testing")
+
+test_that("create_tte_prior is working properly", {
+  expect_true(is.matrix(prior1))
+  expect_identical(colnames(prior1), c("OddTime","WeirdEvent"))
+  expect_identical(colnames(prior1a), c("Time","Event"))
+  expect_equal(nrow(prior1),nrow(prior1a), 128)
+  expect_equal(max(prior1a[,"Time"]), 20)
+  expect_equal(sum(prior1[,"WeirdEvent"]), sum(1-prior1a[,"Event"]), 40)
+  expect_equal(as.numeric(c(getParam(b,1),getParam(b,2))),as.numeric(reverse_prior$Parameters),tolerance=0.01 )
+})
+
+test_that("fit_tte_data_prior is working properly", {
+  expect_true(is.list(test2))
+  expect_named(test2,c("Curvetype","Parameters","VCov","Fit"))
+  expect_named(test2$Parameters,c("Alpha","Beta"))
+  expect_identical(as.character(test2$Curvetype),"Weibull")
+  expect_named(test2$VCov,c("Alpha_Var","Beta_Var","Covariance"))
+  expect_equal(as.numeric(test1$Parameters),as.numeric(test3$Parameters),tolerance=0.0001)
+  expect_equal(as.numeric(test2$Parameters),c(112.138942,1.020106),tolerance=0.0001)
+  expect_equal(as.numeric(test1$VCov),as.numeric(test3$VCov),tolerance=0.0001)
+  expect_equal(as.numeric(test2$VCov),c(1138.75502591,0.02636093,-4.62702305),tolerance=0.0001)
+})
+
+test_that("event_prediction_prior is working properly", {
+  expect_true(is.list(predict4))
+  expect_named(predict4,c("ecurve","dcurve","rcurve","PI","Fitted","Summary"))
+  expect_s4_class(predict4$ecurve,"Curve")
+  expect_s4_class(predict4$dcurve,"Curve")
+  expect_s4_class(predict4$rcurve,"RCurve")
+  expect_true(is.data.frame(predict4$Summary))
+  expect_named(predict4$Summary,c("Time","Patients","Predicted_Events","SE_Fitting","SE_Prediction","Prediction_Lower","Prediction_Upper","Conditioned_Events","Cond_SE_Fitting","Cond_SE_Prediction","Cond_Prediction_Lower","Cond_Prediction_Upper"))
+  expect_equal(as.numeric(predict4$Summary[50,]),tolerance=0.001,c(50,300,79.906,9.6301,12.2904,57,105,86.96,5.67,7.68,73,103))
+  expect_equal(predict2a$Summary,predict4$Summary,tolerance=0.00001)
+  expect_equal(predict2a$ecurve,predict4$ecurve,tolerance=0.00001)
+  expect_equal(predict2a$Fitted$Curvetype,predict4$Fitted$Curvetype,tolerance=0.00001)
+  expect_equal(predict2a$Fitted$Parameters,predict4$Fitted$Parameters,tolerance=0.00001)
+  expect_equal(predict2a$Fitted$VCov,predict4$Fitted$VCov,tolerance=0.00001)
+  expect_equal(predict5a$Summary,predict5$Summary,tolerance=0.00001)
+  expect_equal(as.numeric(predict6$Summary[50,]),tolerance=0.001,c(50,300,95.784,15.4078,17.3727,63,131,107.415,9.4157,10.9361,88,131))
 })

@@ -8,17 +8,29 @@ set_assess_time(
   data,
   time,
   output_type = c("input", "matrix", "list"),
-  detailed_output = TRUE
+  detailed_output = TRUE,
+  Time = "Time",
+  Event = "Censored",
+  censoringOne = TRUE,
+  Iter = "Iter"
 )
 }
 \arguments{
-\item{data}{Output file from simulate_trials() or simulate_trials_strata() in either "list" or "matrix" format. Only these formats are supported.}
+\item{data}{Output file from simulate_trials() or simulate_trials_strata() created with detailed_output=TRUE, in either "list" or "matrix" format. Only these formats are supported.}
 
 \item{time}{Positive number specifying the required assessment time.}
 
 \item{output_type}{Choice of "input" (output in same format as input),"matrix" (matrix format output) or "list" (list format output). Default="input".}
 
 \item{detailed_output}{Boolean to require full details of timings of competing processes. If FALSE, the simplified data only includes the *'ed output columns - this approximately halves RAM requirements. Default=TRUE (detailed).}
+
+\item{Time}{String specifying the name of the time column. Default="Time"}
+
+\item{Event}{String specifying the name of the censoring/event column. Default="Censored" (and by default it is a censoring column unless censoringOne=FALSE)}
+
+\item{censoringOne}{Boolean specifying whether censoring is denoted in the censoring/event column by a one (TRUE) or zero (FALSE). Default=TRUE (censorings denoted by 1, events by 0)}
+
+\item{Iter}{String specifying the name of the iterations column. Default="Iter"}
 }
 \value{
 Returns the input simulated trial, in either matrix or list format, with modified assessment times. All columns dependent on this are also updated.

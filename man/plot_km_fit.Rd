@@ -23,6 +23,7 @@ plot_km_fit(
   CI_lty = 2,
   no_legend = FALSE,
   legend_position = c("bottom_left", "top_right"),
+  overlay = FALSE,
   ...
 )
 }
@@ -62,6 +63,8 @@ plot_km_fit(
 \item{no_legend}{Boolean to turn off legend. Default is FALSE; legend shown.}
 
 \item{legend_position}{String with "top_right", or "bottom_left", corresponding to legend position in power plot. (Default="bottom_left").}
+
+\item{overlay}{Boolean whether to overlay on existing plot (vs start a new one). Default=FALSE}
 
 \item{...}{Additional graphical parameters.}
 }

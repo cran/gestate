@@ -8,6 +8,7 @@
   theObject,
   overlay = FALSE,
   maxT = 100,
+  minSF = 0,
   increment = 0.1,
   xlab = "Time",
   ylab = "S(t)",
@@ -22,6 +23,8 @@
 \item{overlay}{Boolean whether to overlay on existing one (vs start a new one). Default=FALSE}
 
 \item{maxT}{Maximum time to plot up to. Default=100}
+
+\item{minSF}{Minimum SF to plot down to. Default=0}
 
 \item{increment}{Plotting time increment. Default=0.1}
 

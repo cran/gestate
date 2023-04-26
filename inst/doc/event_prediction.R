@@ -85,3 +85,25 @@ plot_km_fit(fit=predictions2,data=trial_less_short, Event="Censored",censoringOn
 plot_km_fit(fit=predictions3,data=trial_mature, Event="Censored",censoringOne=TRUE,main="Kaplan Meier Curve Fit Plot: 18 Months",maxT=45,xlim=c(0,40))
 
 
+## -----------------------------------------------------------------------------
+
+example_data_prior <- create_tte_prior(curve=example_distribution,duration=100,events=100)
+head(example_data_prior)
+tail(example_data_prior)
+fit3 <- fit_tte_data(data=example_data_prior,Time="Time",type="Weibull")
+fit3$Parameters
+  
+
+## -----------------------------------------------------------------------------
+prior <- create_tte_prior(curve=Weibull(50,0.8),duration=36,events=200, Event="Censored", censoringOne=TRUE)
+
+## -----------------------------------------------------------------------------
+
+predictions_prior <- event_prediction_prior(data=trial_short, priordata=prior, priorweight=0.25, Event="Censored", censoringOne=TRUE, type="Weibull", rcurve=recruit, max_time=60, cond_Events=49, cond_NatRisk=451, cond_Time=10, units="Months")
+
+
+## ---- fig.show='hold',fig.height = 5, fig.width = 7, fig.align = "center"-----
+# Plot observed events and conditional predictions
+plot_ep(predictions,trajectory="conditional",which_PI="conditional",max_time=40,observed=events,target=200,max_E=200,main="Kaplan Meier Curve Fit Plot: 10 Months, No Prior Information")
+plot_ep(predictions_prior,trajectory="conditional",which_PI="conditional",max_time=40,observed=events,target=200,max_E=200,main="Kaplan Meier Curve Fit Plot: 10 Months, Prior Information")
+

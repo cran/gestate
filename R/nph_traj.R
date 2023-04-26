@@ -11,9 +11,9 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Dfunction_control","Dfu
 #' From these, it estimates an expected HR, with the same interpretation as that found using Cox regression, using the Pike method.
 #' The estimated event numbers and HR can be used to calculate power by one of several methods, including the Schoenfeld and Frontier methods.
 #' A separate, direct, power calculation can also be performed using the log-rank test formula and its Z-distribution.\cr
-#' To assist sample size finding, the function will also optionally estimate the required sample size to reach a given power 
+#' To assist sample size finding, the function will also optionally estimate the required sample size to reach a given power
 #' keeping all variables other than recruitment.\cr
-#' Expected RMST and landmark analysis properties may also be calculated. This also uses numerical integration techniques. 
+#' Expected RMST and landmark analysis properties may also be calculated. This also uses numerical integration techniques.
 #' Power is also then estimated for such analyses.\cr
 #' @param active_ecurve Event distribution for the active arm, specified as a Curve object
 #' @param control_ecurve Event distribution for the control arm, specified as a Curve object
@@ -87,7 +87,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Dfunction_control","Dfu
 #' @author James Bell
 #' @references Bell J, Accurate Sample Size Calculations in Trials with Non-Proportional Hazards, 2018, presentation at PSI Conference.
 #' \url{https://www.psiweb.org/docs/default-source/default-document-library/james-bell-slides.pdf?sfvrsn=3324dedb_0}
-#' Bell J, Power Calculations for Time-to-Event Trials Using Predicted Event Proportions, 2019, paper under review.
+#' Bell J, Power Calculations for Time-to-Event Trials Using Predicted Event Proportions, 2019, unpublished.
 #' Ruehl J, Sample Size Calculation in Time-To-Event Trials with Non-Proportional Hazards Using GESTATE, 2018, BSc thesis at University of Ulm.
 #' Pike MC, Contribution to discussion in Asymptotically efficient rank invariant test procedures by Peto R and Peto J,
 #' Journal of the Royal Statistical Society Series A, 135(2), 201-203.
@@ -96,18 +96,14 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Dfunction_control","Dfu
 #' @export
 nph_traj <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),control_dcurve=Blank(),rcurve,max_assessment=100,landmark=NULL,RMST=NULL,HRbound=1,alpha1=0.025,required_power=NULL,detailed_output=FALSE){
   # Perform checks of inputs
-  # Firstly, check for missing arguments
-  if(missing(active_ecurve))stop("Please specify the active event curve using the 'active_ecurve' argument. Please note that this should be a Curve object; Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
-  if(missing(control_ecurve))stop("Please specify the control event curve using the 'control_ecurve' argument. Please note that this should be a Curve object; Create one using a Curve constructor function, e.g. control_ecurve <- Weibull(beta=1,lambda=1)")
-  if(missing(rcurve))stop("Please specify the recruitment distribution using the 'rcurve' argument. Please note that this should be an RCurve object; Create one using an RCurve constructor function, e.g. rcurve <- LinearR(rlength=10,Nactive=100,Ncontrol=100)")
 
-  # Secondly, check for improper arguments, in particular that inputs are Curve objects
-  #Curve and RCurve objects
-  if(class(active_ecurve)[1]!= "Curve") stop("Argument 'active_ecurve' must be a Curve object in order to define the active event curve. Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
-  if(class(control_ecurve)[1]!= "Curve") stop("Argument 'control_ecurve' must be a Curve object in order to define the control event curve. Create one using a Curve constructor function, e.g. control_ecurve <- Weibull(beta=1,lambda=1)")
-  if(class(active_dcurve)[1]!= "Curve") stop("Argument 'active_dcurve' must be a Curve object in order to define the active censoring curve. Create one using a Curve constructor function, e.g. active_dcurve <- Weibull(beta=1,lambda=1)")
-  if(class(control_dcurve)[1]!= "Curve") stop("Argument 'control_dcurve' must be a Curve object in order to define the control censoring curve. Create one using a Curve constructor function, e.g. control_dcurve <- Weibull(beta=1,lambda=1)")
-  if(class(rcurve)[1]!= "RCurve") stop("Argument 'rcurve' must be an RCurve object in order to define a recruitment distribution. Create one using an RCurve constructor function, e.g. rcurve <- LinearR(rlength=10,Nactive=100,Ncontrol=100)")
+  #Curves
+  if(!testCurve(control_ecurve,is.single=TRUE)) stop("Argument 'control_ecurve' must be a single Curve object that defines the control event curve. Create one using a Curve constructor function, e.g. control_ecurve <- Weibull(beta=1,lambda=1)")
+  if(!testCurve(active_ecurve,is.single=TRUE))  stop("Argument 'active_ecurve' must be a single Curve object that defines the active event curve. Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
+  if(!testCurve(control_dcurve,is.single=TRUE)) stop("Argument 'control_dcurve' must be a single Curve object that defines the control censoring curve. Create one using a Curve constructor function, e.g. control_dcurve <- Weibull(beta=1,lambda=1)")
+  if(!testCurve(active_dcurve,is.single=TRUE))  stop("Argument 'active_dcurve' must be a single Curve object that defines the active censoring curve. Create one using a Curve constructor function, e.g. active_dcurve <- Weibull(beta=1,lambda=1)")
+  if(!testCurve(rcurve, R=TRUE,is.single=TRUE)) stop("Argument 'rcurve' must be a single RCurve object that defines the recruitment distribution. Create one using an RCurve constructor function, e.g. rcurve <- LinearR(rlength=10,Nactive=100,Ncontrol=100)")
+
   #Positive integers
   if(max_assessment%%1!=0 | max_assessment < 1 ) stop("Please specify a positive integer for the maximum assessment time using the 'max_assessment' argument")
   if(!is.null(landmark) && (landmark%%1!=0 | landmark < 1 )) stop("Landmark calculations specified, but landmark time is not a positive integer.")
@@ -117,7 +113,7 @@ nph_traj <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),control_
   if(!is.null(required_power) && (!(required_power > 0) | !(required_power < 1) )) stop("Sample size for a required power is specified, but power is not a value between 0 and 1 (exclusive).")
   if(!is.numeric(HRbound) || HRbound <= 0) stop("Please specify a positive value of HR to test significance against (default is 1, for superiority testing).")
   #Boolean
-  if(!is.logical(detailed_output))stop("Error: detailed_output argument must be boolean: default=FALSE (simplified output).")
+  if(!testBoolean(detailed_output,is.flag=TRUE))stop("Error: detailed_output argument must be a boolean flag: default=FALSE (simplified output).")
 
   #As the expected HR method is only accurate, not exact, where simple PH can be detected, GESTATE will
   #preferentially use the easily-calculated exact theoretical value. Exp and Weibull curve detection supported

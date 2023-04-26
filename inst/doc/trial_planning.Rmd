@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 ## 1 Introduction
 
 ### 1.1 Vignette Overview
-The gestate package is designed to assist accurate planning and event prediction for time-to-event clinical trials. In this vignette, we introduce the gestate package, and demonstrate how it may be used in trial planning. A separate vignette ("event_prediction") covers event prediction of ongoing trials. The first section will show how distributions are easily described and stored as Curve and RCurve objects. The second section will demonstrate analytic methods for trial planning, and the third section will show how simulate may be alternatively used. 
+The gestate package is designed to assist accurate planning and event prediction for time-to-event clinical trials. In this vignette, we introduce the gestate package, and demonstrate how it may be used in trial planning. A separate vignette ("event_prediction") covers event prediction of ongoing trials. The first section will show how distributions are easily described and stored as Curve and RCurve objects. The second section will demonstrate analytic methods for trial planning, and the third section will show how simulation may be alternatively used. 
 
 ### 1.2 Exponential Distributions 
 The least possible information required to calculate a time-to-event trial's predicted properties are distributions of events in each arm and an expected distribution of patient recruitment, including the number per arm. However, typically event distributions are over-simplified by implicitly assuming exponential distributions and then defining them by a single number (often the median). This shortcut is not available in gestate since events in many clinical trials do not follow exponential distributions and assuming this without evidence can lead to inaccurate trial planning. Even where no historical information is available and an exponential distribution can be considered to be the best guess, it is important to be clear that a choice has been made in setting a distribution to exponential. Gestate therefore requires explicit selection of distribution types, as well as their parameters, and does not default to exponential.
@@ -54,7 +54,7 @@ Curve objects serve three main purposes; they allow the gestate code to be indep
 
 So long as a distribution is supported, a user may create a Curve object by using a (constructor) function corresponding to the distribution of interest, providing its parameters as arguments. 
 
-gestate V1.4.x comes with the following distributions supported as Curve objects:
+gestate V1.6.x comes with the following distributions supported as Curve objects:
 
 | Distribution | Function    | Parameter Arguments | S(t) |
 |:-------------|:------------|:--------------------|:------|
@@ -85,7 +85,7 @@ Where you want to make an event / censoring impossible, you can use define a nul
 
 Recruitment-associated distributions use a special form of Curve object; the RCurve. This differs in several ways. Firstly, it also includes details of patient numbers for two arms; an active arm and a control arm. Secondly, it stores the distribution of patient recruitment, rather than a censoring distribution. This is because the 'censoring distribution' can only be defined in conjunction with an assessment time.
 
-gestate V1.4.x comes with the following recruitment distributions supported as RCurve objects:
+gestate V1.6.x comes with the following recruitment distributions supported as RCurve objects:
 
 | Distribution | Function | Parameter Arguments | Notes                 |
 |:-------------|:---------|:--------------------|:----------------------|
@@ -225,7 +225,9 @@ Syntax for simulate_trials is very similar to that of nph_traj, and the same Cur
 
 In addition to these similar inputs, two simulation-specific arguments are also required; the number of simulation iterations to run ('iterations') and the random seed to use ('seed'). Finally, it is also necessary to specify either a time ('assess'), or a fixed number of events ('fix_events') to analyse at. If both are specified, the fixed event number will be used.
 
-Four columns are produced in the output matrix; 'Time', which gives the time, 'Censored', which gives the censoring indicator (where 1 is patient was censored), 'Trt', which gives the treatment number, and 'Iter', which is the iteration number. 
+Four columns are produced in the output matrix, with the following default names and interpretations: 'Time', which gives the time, 'Censored', which gives the censoring indicator (where 1 is patient was censored), 'Trt', which gives the treatment number, and 'Iter', which is the iteration number.
+
+From version 1.6.0 onwards, the names of these columns may be changed with the respective 'Time', 'Event', 'Trt' and 'Iter' arguments. The censoringOne argument may also be set to 'FALSE' to change the interpretation of the Event/Censoring column from the default 1 = Censored, to the alternative 1 = Event. It is important to note that when changing any of these defaults, the same arguments with the same values also will need to be supplied to any functions that read or modify the simulated data, as otherwise they all expect the default values. Examples of such functions include analyse_sim, set_event_number and set_assess_time. 
 
 A simple example corresponding to the first example from the nph_traj section is given here:
 
@@ -297,7 +299,9 @@ simulation1b <- set_assess_time(data=simulation1a,time=10,output_type="list",det
 
 ### 4.4 Analysing Simulated Data: analyse_sim
 
-analyse_sim can be used to analyse data simulated by gestate. It is designed to automatically detect the input formats and provide minimal-fuss analysis. To perform a log-rank test and Cox regression is thus simply:
+analyse_sim can be used to analyse data simulated by gestate. It is designed to automatically detect the default input formats and provide minimal-fuss Cox and LRT analysis. 
+
+To perform a log-rank test and Cox regression on simulated data in the standard format is thus simply:
 
 ```{r}
 # Perform log-rank test and Cox regression on simulated data
@@ -305,6 +309,8 @@ analysis1 <- analyse_sim(simulation1)
 head(analysis1)
 
 ```
+
+If column headers or the censoring/event meaning in the simulated data are not default then any changes will need to be supplied to the function using the arguments 'Time', 'Event', 'Trt', 'Iter' and 'censoringOne'. 
 
 analyse_sim produces a matrix with each row containing the results of one iteration. For Cox regression, output is produced for the HR and log-HR as well as its standard error, Z score and p-value. For the log-rank test the Z score and p-value are returned. The number of events in each arm is also produced, 
 
@@ -321,7 +327,7 @@ Landmark and RMST analysis may also be requested by specifying the landmark and 
 
 For both landmark and RMST analyses, estimates are returned for each arm and the difference between them. Standard errors for all three quantities are produced, along with the Z score and p-value.
 
-To speed up analysis, gestate supports parallel processing through the doParallel package. If this is installed then the 'parallel_cores' argument may be set to the required number of cores. Analysis code has also been optimised in V1.4.x to increase speed, with 4-fold improvement overall and at least 50-fold increase for covariate-adjusted RMST in comparison to v1.3.2. 
+To speed up analysis, gestate supports parallel processing through the doParallel package. If this is installed then the 'parallel_cores' argument may be set to the required number of cores. 
 
 A final analysis example is:
 

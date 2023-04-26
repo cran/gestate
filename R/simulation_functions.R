@@ -6,7 +6,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","
 #' Function for simulating generalised two-arm time-to-event trial data for NPH trials with arbitrary event, censoring and recruitment distributions.\cr
 #' Event and censoring distributions are specified via Curve objects, with recruitment specified through an RCurve object.
 #' As it uses same architecture and similar syntax to nph_traj(), analysis results ought to be directly comparable.
-#' It is designed to complement nph_traj(), either as a stochastic alternative, or as a means to validate its outputs. 
+#' It is designed to complement nph_traj(), either as a stochastic alternative, or as a means to validate its outputs.
 #' It can also be used to build more complex simulations by combining the outputs of multiple runs; e.g. multi-arm trials.\cr
 #' Data sets created by this function are formatted so they may be automatically recognised and analysed by analyse_sim().\cr
 #' @param active_ecurve Event distribution for the active arm, specified as a Curve object
@@ -18,22 +18,27 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","
 #' @param fix_events Positive integer for the number of events to fix (if required), letting the assessment time vary. Alternatively, NULL for fixed time assessment with variable event numbers. Notes: Fixing event numbers overrides any specified assessment time and slows simulation considerably. Default = NULL (fixed analysis time)
 #' @param iterations Number of simulations to perform. Depending on trial size, 10,000-20,000 is typically OK to analyse on 8GB RAM.
 #' @param seed Seed number to use. Numerical, although if "Rand" is specified, a system-time-derived number will be used.
-#' @param detailed_output Boolean to require full details of timings of competing processes. If FALSE, the simplified data only includes the *'ed output columns - this approximately halves RAM requirements. Default=FALSE (simplified).
+#' @param detailed_output Boolean to require full details of timings of competing processes. Full details required for any future adjustments to assessment time. Simplified option approximately halves RAM requirements. Default=FALSE (simplified).
 #' @param output_type "matrix" or "list" specifying the type of output required. "matrix" requests a single matrix with a column "iter" to denote the simulation, while "list" creates a list with one entry per simulation. Default="matrix".
+#' @param Time String specifying the name of the output time column. Default="Time"
+#' @param Event String specifying the name of the output censoring/event column. Default="Censored" (and by default it is a censoring column unless censoringOne=FALSE)
+#' @param censoringOne Boolean specifying whether censoring is denoted in the censoring/event column by a one (TRUE) or zero (FALSE). Default=TRUE (censorings denoted by 1, events by 0)
+#' @param Trt String specifying the name of the output treatment column. Default="Trt"
+#' @param Iter String specifying the name of the output iterations column. Default="Iter"
 #' @import survival
 #' @import foreach
 #' @importFrom doParallel registerDoParallel
 #' @return Returns a table with one row per patient per simulation. Table contains the following columns:
 #' \itemize{
-#'  \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis*}
-#'  \item{"Censored"}{ Simulated censoring indicator: 1 denotes censoring (administrative or dropout), 0 denotes an event*}
-#'  \item{"Trt"}{ Treatment group number - 1 is active, 2 is control*}
-#'  \item{"Iter"}{ Simulation number*}
-#'  \item{"ETime"}{ Simulated actual event (patient) time (may or may not be observed)}
-#'  \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed)}
-#'  \item{"Rec_Time"}{ Simulated (trial) time of recruitment}
-#'  \item{"Assess"}{ Prespecified (trial) time of assessment}
-#'  \item{"Max_F"}{ Prespecified maximum patient follow-up time}
+#'  \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis. Named by Time argument.}
+#'  \item{"Event"}{ Simulated event indicator denoting censorings/events as 1/0 if censoringOne=TRUE and 0/1 if censoringOne=FALSE. Named by Event argument.}
+#'  \item{"Trt"}{ Treatment group number - 1 is active, 2 is control. Named by Trt argument.}
+#'  \item{"Iter"}{ Simulation number. Named by Iter argument.}
+#'  \item{"ETime"}{ Simulated actual event (patient) time (may or may not be observed). Only produced when detailed_output=TRUE.}
+#'  \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed).Only produced when detailed_output=TRUE.}
+#'  \item{"Rec_Time"}{ Simulated (trial) time of recruitment. Only produced when detailed_output=TRUE.}
+#'  \item{"Assess"}{ Prespecified (trial) time of assessment. Only produced when detailed_output=TRUE.}
+#'  \item{"Max_F"}{ Prespecified maximum patient follow-up time. Only produced when detailed_output=TRUE.}
 #'  \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed)}
 #' }
 #' @author James Bell
@@ -41,47 +46,52 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","
 #' example_sim <- simulate_trials(active_ecurve=Weibull(250,0.8),control_ecurve=Weibull(100,1),
 #' rcurve=LinearR(12,100,100), assess=20, iterations=5,seed=12345)
 #' @export
-simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),control_dcurve=Blank(),rcurve,assess=NULL,fix_events=NULL,iterations,seed,detailed_output=FALSE,output_type=c("matrix","list")){
+simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),control_dcurve=Blank(),rcurve,assess=NULL,fix_events=NULL,iterations,seed,detailed_output=FALSE,output_type=c("matrix","list"),Time="Time",Event="Censored",censoringOne=TRUE,Trt="Trt",Iter="Iter"){
 
   # Perform input checks
-  # Firstly, check for missing arguments
-  if(missing(active_ecurve))stop("Please specify the active event curve using the 'active_ecurve' argument. Please note that this should be a Curve object; Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
-  if(missing(control_ecurve))stop("Please specify the control event curve using the 'control_ecurve' argument. Please note that this should be a Curve object; Create one using a Curve constructor function, e.g. control_ecurve <- Weibull(beta=1,lambda=1)")
-  if(missing(rcurve))stop("Please specify the recruitment distribution using the 'rcurve' argument. Please note that this should be an RCurve object; Create one using an RCurve constructor function, e.g. rcurve <- LinearR(rlength=10,Nactive=100,Ncontrol=100)")
-  if(missing(seed)) stop("Please specify a value for the random seed using the 'seed' argument. For a system-time-derived random seed number, use 0")
-  if(missing(iterations)) stop("Please specify the required number of simulations using the 'iterations' argument")
+
   if(is.null(assess) & is.null(fix_events)) stop("Please specify either an assessment time (assess) or a fixed number of events (fix_events)")
 
-  # Secondly, check argument forms
   #Curves
-  if(class(control_ecurve)[1]!= "Curve") stop("Argument 'control_ecurve' must be a Curve object in order to define the control event curve. Create one using a Curve constructor function, e.g. control_ecurve <- Weibull(beta=1,lambda=1)")
-  if(class(active_ecurve)[1]!= "Curve") stop("Argument 'active_ecurve' must be a Curve object in order to define the active event curve. Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
-  if(class(control_dcurve)[1]!= "Curve") stop("Argument 'control_dcurve' must be a Curve object in order to define the control censoring curve. Create one using a Curve constructor function, e.g. control_dcurve <- Weibull(beta=1,lambda=1)")
-  if(class(active_dcurve)[1]!= "Curve") stop("Argument 'active_dcurve' must be a Curve object in order to define the active censoring curve. Create one using a Curve constructor function, e.g. active_dcurve <- Weibull(beta=1,lambda=1)")
-  if(class(rcurve)[1]!= "RCurve") stop("Argument 'rcurve' must be an RCurve object in order to define a recruitment distribution. Create one using an RCurve constructor function, e.g. rcurve <- LinearR(rlength=10,Nactive=100,Ncontrol=100)")
+  if(!testCurve(control_ecurve,is.single=TRUE)) stop("Argument 'control_ecurve' must be a single Curve object that defines the control event curve. Create one using a Curve constructor function, e.g. control_ecurve <- Weibull(beta=1,lambda=1)")
+  if(!testCurve(active_ecurve,is.single=TRUE))  stop("Argument 'active_ecurve' must be a single Curve object that defines the active event curve. Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
+  if(!testCurve(control_dcurve,is.single=TRUE)) stop("Argument 'control_dcurve' must be a single Curve object that defines the control censoring curve. Create one using a Curve constructor function, e.g. control_dcurve <- Weibull(beta=1,lambda=1)")
+  if(!testCurve(active_dcurve,is.single=TRUE))  stop("Argument 'active_dcurve' must be a single Curve object that defines the active censoring curve. Create one using a Curve constructor function, e.g. active_dcurve <- Weibull(beta=1,lambda=1)")
+  if(!testCurve(rcurve, R=TRUE,is.single=TRUE)) stop("Argument 'rcurve' must be a single RCurve object that defines a recruitment distribution. Create one using an RCurve constructor function, e.g. rcurve <- LinearR(rlength=10,Nactive=100,Ncontrol=100)")
 
   #Positive integers
-  if(iterations%%1!=0 || iterations < 1 ) stop("Please specify a positive integer for the number of simulations using the 'iterations' argument")
+  if(!testNumber(iterations, type = "positive", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the number of simulations using the 'iterations' argument")
   if(is.null(assess) ||(!is.null(fix_events) & assess < getLength(rcurve))){assess=ceiling(getLength(rcurve)+1)}
-  if(!is.numeric(assess) || assess < 1 ) stop("Please specify a positive number for the assessment time using the 'assess' argument")
-  if(seed%%1!=0 || seed < 0 ) stop("Please specify a positive integer for the seed (or 0 for a random one) using the 'seed' argument")
-  if(!is.null(fix_events) && (fix_events%%1!=0 || fix_events < 1 )) stop("Fixed event assessment specified, but fix_events is not a positive integer.")
+  if(!testNumber(assess, type = "positive",is.single=TRUE)) stop("Please specify a single positive number for the assessment time using the 'assess' argument")
+  if(!testNumber(seed, type = "positive", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the seed (or 0 for a random one) using the 'seed' argument")
+  if(!is.null(fix_events) && !testNumber(fix_events, type = "positive", integer = TRUE,is.single=TRUE)) stop("Fixed event assessment specified, but fix_events is not a positive integer.")
+
+  #Strings
+  if(!testString(Time,is.single=TRUE))stop("Error: Time argument must be a single string: default='Time'.")
+  if(!testString(Event,is.single=TRUE))stop("Error: Event argument must be a single string: default='Censored'.")
+  if(!testString(Trt,is.single=TRUE))stop("Error: Trt argument must be a single string: default='Trt'.")
+  if(!testString(Iter,is.single=TRUE))stop("Error: Iter argument must be a single string: default='Iter'.")
 
   #Multiple choice
   output_type <- match.arg(output_type)
 
   #Boolean
-  if(!is.logical(detailed_output))stop("Error: detailed_output argument must be boolean: default=FALSE (simplified output).")
+  if(!testBoolean(detailed_output,is.flag=TRUE))stop("Error: detailed_output argument must be a boolean flag: default=FALSE (simplified output).")
+  if(!testBoolean(censoringOne,is.flag=TRUE))stop("Error: censoringOne argument must be a boolean flag: default=TRUE (1 is censored, 0 is event).")
 
   if(is.null(fix_events) && assess<getLength(rcurve)){
     message("Note: assessment time is shorter than the length of the recruitment period:",getLength(rcurve),". Any attempt to increase the assessment time at a later date will result in missing patients!\n")
   }
 
+#######
+# Start of main code
+#
   # Set the random seed based on input argument
   if(seed==0){
     seed <- as.numeric(Sys.time())
   }
   set.seed(seed)
+
   columns <- 10
   nactive <- ceiling(getNactive(rcurve))
   ncontrol <- floor(getNcontrol(rcurve))
@@ -119,21 +129,22 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
   } else if(nactive <= 0) {output <- controlmatrix}
 
   # Create recruitment time
-  colnames(output) <- c("Time","Censored","Trt","Iter","ETime", "CTime", "Rec_Time", "Assess","Max_F", "RCTime")
+  colnames(output) <- c(Time,Event,Trt,Iter,"ETime", "CTime", "Rec_Time", "Assess","Max_F", "RCTime")
   output[,"Rec_Time"] <- random_draw(rcurve,n*iterations)
   output[,"Max_F"] <- getMaxF(rcurve)
-  output <- update_times_assess(output,assess)
+  output <- update_times_assess(data=output,assess=assess,censoringOne=censoringOne,Time=Time,Event=Event)
   output <- output[output[,"RCTime"]>=0,]
+
   # This section handles event fixing and choice of output formatting
   # Note that output formatting is also outsourced to the event-fixing function if event-fixing requested
   if(!is.null(fix_events)){
-    output <- set_event_number(data=output,events=fix_events,output_type=output_type,detailed_output=detailed_output)
+    output <- set_event_number(data=output,events=fix_events,output_type=output_type,detailed_output=detailed_output,censoringOne=censoringOne,Time=Time,Event=Event)
   } else {
     if(!detailed_output){
-      output <- output[,c("Time","Censored","Trt","Iter")]
+      output <- output[,c(Time,Event,Trt,Iter)]
     }
     if(output_type=="list"){
-      output <- split.data.frame(as.matrix(subset(output,select=-Iter)),output[,"Iter"])
+      output <- split.data.frame(as.matrix(subset(output,select=-Iter)),output[,Iter])
     }
   }
   return(output)
@@ -160,24 +171,29 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
 #' @param stratum_name Name of the column defining the stratum. Default="Stratum".
 #' @param iterations Number of simulations to perform. Depending on trial size, 10,000-20,000 is typically OK to analyse on 8GB RAM.
 #' @param seed Seed number to use. Numerical, although if "Rand" is specified, a system-time-derived number will be used.
-#' @param detailed_output Boolean to require full details of timings of competing processes. If FALSE, the simplified data only includes the *'ed output columns - this approximately halves RAM requirements. Default=FALSE (simplified).
+#' @param detailed_output Boolean to require full details of timings of competing processes. Full details required for any future adjustments to assessment time. Simplified option approximately halves RAM requirements. Default=FALSE (simplified).
 #' @param output_type "matrix" or "list" specifying the type of output required. "matrix" requests a single matrix with a column "iter" to denote the simulation, while "list" creates a list with one entry per simulation. Default="matrix".
+#' @param Time String specifying the name of the output time column. Default="Time"
+#' @param Event String specifying the name of the output censoring/event column. Default="Censored" (and by default it is a censoring column unless censoringOne=FALSE)
+#' @param censoringOne Boolean specifying whether censoring is denoted in the censoring/event column by a one (TRUE) or zero (FALSE). Default=TRUE (censorings denoted by 1, events by 0)
+#' @param Trt String specifying the name of the output treatment column. Default="Trt"
+#' @param Iter String specifying the name of the output iterations column. Default="Iter"
 #' @import survival
 #' @import foreach
 #' @importFrom doParallel registerDoParallel
 #' @return Returns a table with one row per patient per simulation. Table contains the following columns:
 #' \itemize{
-#'  \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis*}
-#'  \item{"Censored"}{ Simulated censoring indicator: 1 denotes censoring (administrative or dropout), 0 denotes an event*}
-#'  \item{"Trt"}{ Treatment group number - 1 is active, 2 is control*}
-#'  \item{"Iter"}{ Simulation number*}
-#'  \item{"ETime"}{ Simulated actual event (patient) time (may or may not be observed)}
-#'  \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed)}
-#'  \item{"Rec_Time"}{ Simulated (trial) time of recruitment}
-#'  \item{"Assess"}{ Prespecified (trial) time of assessment}
-#'  \item{"Max_F"}{ Prespecified maximum patient follow-up time}
-#'  \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed)}
+#'  \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis. Named by Time argument.}
+#'  \item{"Event"}{ Simulated event indicator denoting censorings/events as 1/0 if censoringOne=TRUE and 0/1 if censoringOne=FALSE. Named by Event argument.}
+#'  \item{"Trt"}{ Treatment group number - 1 is active, 2 is control. Named by Trt argument.}
+#'  \item{"Iter"}{ Simulation number. Named by Iter argument.}
 #'  \item{"Stratum"}{ Stratum number. Column name will be the value of the stratum_name argument.)}
+#'  \item{"ETime"}{ Simulated actual event (patient) time (may or may not be observed). Only produced when detailed_output=TRUE.}
+#'  \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed).Only produced when detailed_output=TRUE.}
+#'  \item{"Rec_Time"}{ Simulated (trial) time of recruitment. Only produced when detailed_output=TRUE.}
+#'  \item{"Assess"}{ Prespecified (trial) time of assessment. Only produced when detailed_output=TRUE.}
+#'  \item{"Max_F"}{ Prespecified maximum patient follow-up time. Only produced when detailed_output=TRUE.}
+#'  \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed. Only produced when detailed_output=TRUE.)}
 #' }
 #' @author James Bell
 #' @examples
@@ -185,42 +201,46 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
 #' active_ecurve=c(Weibull(250,0.8),Weibull(100,1)), control_ecurve=Weibull(100,1),
 #' rcurve=LinearR(12,100,100),assess=20,iterations=5,seed=12345)
 #' @export
-simulate_trials_strata <- function(stratum_probs,active_ecurve,control_ecurve,active_dcurve=Blank(),control_dcurve=Blank(),rcurve,assess=NULL,fix_events=NULL,stratum_name="Stratum",iterations,seed,detailed_output=FALSE,output_type=c("matrix","list")){
+simulate_trials_strata <- function(stratum_probs,active_ecurve,control_ecurve,active_dcurve=Blank(),control_dcurve=Blank(),rcurve,assess=NULL,fix_events=NULL,stratum_name="Stratum",iterations,seed,detailed_output=FALSE,output_type=c("matrix","list"),Time="Time",Event="Censored",censoringOne=TRUE,Trt="Trt",Iter="Iter"){
 # Input checks and define number of strata
   output_type <- match.arg(output_type)
 
   # Perform input checks
-  # Firstly, check for missing arguments
-  if(missing(stratum_probs))stop("Please specify a vector of probabilities for strata membership (summing to 1) using the 'stratum_probs' argument.")
-  if(missing(active_ecurve))stop("Please specify the active event curve using the 'active_ecurve' argument. Please note that this should be a Curve object; Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
-  if(missing(control_ecurve))stop("Please specify the control event curve using the 'control_ecurve' argument. Please note that this should be a Curve object; Create one using a Curve constructor function, e.g. control_ecurve <- Weibull(beta=1,lambda=1)")
-  if(missing(rcurve))stop("Please specify the recruitment distribution using the 'rcurve' argument. Please note that this should be an RCurve object; Create one using an RCurve constructor function, e.g. rcurve <- LinearR(rlength=10,Nactive=100,Ncontrol=100)")
-  if(missing(seed)) stop("Please specify a value for the random seed using the 'seed' argument. For a system-time-derived random seed number, use \"random\"")
-  if(missing(iterations)) stop("Please specify the required number of simulations using the 'iterations' argument")
+
   if(is.null(assess) & is.null(fix_events)) stop("Please specify either an assessment time (assess) or a fixed number of events (fix_events)")
 
-  # Secondly, check argument forms
-  if(class(rcurve)[1]!= "RCurve") stop("Argument 'rcurve' must be an RCurve object in order to define a recruitment distribution. Create one using an RCurve constructor function, e.g. rcurve <- LinearR(rlength=10,Nactive=100,Ncontrol=100)")
   #Positive integers
+  if(!testNumber(iterations, type = "positive", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the number of simulations using the 'iterations' argument")
   if(is.null(assess) ||(!is.null(fix_events) & assess < getLength(rcurve))){assess=ceiling(getLength(rcurve)+1)}
-  if(iterations%%1!=0 | iterations < 1 ) stop("Please specify a positive integer for the number of simulations using the 'iterations' argument")
-  if(!is.numeric(assess) || assess < 1 ) stop("Please specify a positive number for the assessment time using the 'assess' argument")
-  if(seed%%1!=0 | seed < 1 ) stop("Please specify a positive integer for the seed using the 'seed' argument")
-  if(!is.null(fix_events) && (fix_events%%1!=0 | fix_events < 1 )) stop("Fixed event assessment specified, but fix_events is not a positive integer.")
+  if(!testNumber(assess, type = "positive",is.single=TRUE)) stop("Please specify a single positive number for the assessment time using the 'assess' argument")
+  if(!testNumber(seed, type = "positive", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the seed (or 0 for a random one) using the 'seed' argument")
+  if(!is.null(fix_events) && !testNumber(fix_events, type = "positive", integer = TRUE,is.single=TRUE)) stop("Fixed event assessment specified, but fix_events is not a positive integer.")
+
+  #Probabilities
+  if(!is.null(stratum_probs) && !testProbability(stratum_probs)) stop("Please specify a vector of probabilities for strata membership (summing to 1) using the 'stratum_probs' argument.")
+  if(sum(stratum_probs)!=1)stop("'stratum_probs' must sum to 1")
+
+  #Strings
+  if(!testString(stratum_name,is.single=TRUE))stop("Error: stratum_name argument must be a single string: default='Stratum'.")
+  if(!testString(Time,is.single=TRUE))stop("Error: Time argument must be a single string: default='Time'.")
+  if(!testString(Event,is.single=TRUE))stop("Error: Event argument must be a single string: default='Censored'.")
+  if(!testString(Trt,is.single=TRUE))stop("Error: Trt argument must be a single string: default='Trt'.")
+  if(!testString(Iter,is.single=TRUE))stop("Error: Iter argument must be a single string: default='Iter'.")
+
+  #Multiple choice
+  output_type <- match.arg(output_type)
 
   #Boolean
-  if(!is.logical(detailed_output))stop("Error: detailed_output argument must be boolean: default=FALSE (simplified output).")
-
-  #String
-  if(!is.character(stratum_name))stop("Error: stratum_name argument must be a string: default='Stratum'.")
+  if(!testBoolean(detailed_output,is.flag=TRUE))stop("Error: detailed_output argument must be a boolean flag: default=FALSE (simplified output).")
+  if(!testBoolean(censoringOne,is.flag=TRUE))stop("Error: censoringOne argument must be a boolean flag: default=TRUE (1 is censored, 0 is event).")
 
   # Check stratum-related things
   nstrata <- length(stratum_probs)
-  if(sum(stratum_probs)!=1)stop("stratum_probs must sum to 1")
   if(length(control_ecurve)!=nstrata & length(control_ecurve)!=1)stop("Number of control_ecurves specified is inconsistent with number of strata")
   if(length(active_ecurve)!=nstrata & length(active_ecurve)!=1)stop("Number of active_ecurves specified is inconsistent with number of strata")
   if(length(control_dcurve)!=nstrata & length(control_dcurve)!=1)stop("Number of control_dcurves specified is inconsistent with number of strata")
   if(length(active_dcurve)!=nstrata & length(active_dcurve)!=1)stop("Number of active_dcurves specified is inconsistent with number of strata")
+
 # Catch all single-Curve inputs, apply them to all strata
   if(length(control_ecurve)==1){
     control_ecurve <- list(control_ecurve)[rep(1,nstrata)]
@@ -237,16 +257,23 @@ simulate_trials_strata <- function(stratum_probs,active_ecurve,control_ecurve,ac
   rcurve <- list(rcurve)[rep(1,nstrata)]
 
   #Curves
-  if(class(control_ecurve[[1]])[1]!= "Curve") stop("Argument 'control_ecurve' must be a Curve object (or list thereof) in order to define the control event curve. Create one using a Curve constructor function, e.g. control_ecurve <- Weibull(beta=1,lambda=1)")
-  if(class(active_ecurve[[1]])[1]!= "Curve") stop("Argument 'active_ecurve' must be a Curve object (or list thereof) in order to define the active event curve. Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
-  if(class(control_dcurve[[1]])[1]!= "Curve") stop("Argument 'control_dcurve' must be a Curve object (or list thereof) in order to define the control censoring curve. Create one using a Curve constructor function, e.g. control_dcurve <- Weibull(beta=1,lambda=1)")
-  if(class(active_dcurve[[1]])[1]!= "Curve") stop("Argument 'active_dcurve' must be a Curve object (or list thereof) in order to define the active censoring curve. Create one using a Curve constructor function, e.g. active_dcurve <- Weibull(beta=1,lambda=1)")
+  if(!testCurve(rcurve[[1]], R=TRUE,is.single=TRUE)) stop("Argument 'rcurve' must be a single RCurve object that defines a recruitment distribution. Create one using an RCurve constructor function, e.g. rcurve <- LinearR(rlength=10,Nactive=100,Ncontrol=100)")
 
+  for(i in 1:nstrata){
+    if(!testCurve(control_ecurve[[i]],is.single=TRUE)) stop("Argument 'control_ecurve' must be a Curve object (or list thereof) in order to define the control event curves. Create one using a Curve constructor function, e.g. control_ecurve <- Weibull(beta=1,lambda=1)")
+    if(!testCurve(active_ecurve[[i]],is.single=TRUE))  stop("Argument 'active_ecurve' must be a Curve object (or list thereof) in order to define the active event curves. Create one using a Curve constructor function, e.g. active_ecurve <- Weibull(beta=1,lambda=1)")
+    if(!testCurve(control_dcurve[[i]],is.single=TRUE)) stop("Argument 'control_dcurve' must be a Curve object (or list thereof) in order to define the control censoring curves. Create one using a Curve constructor function, e.g. control_dcurve <- Weibull(beta=1,lambda=1)")
+    if(!testCurve(active_dcurve[[i]],is.single=TRUE))  stop("Argument 'active_dcurve' must be a Curve object (or list thereof) in order to define the active censoring curves. Create one using a Curve constructor function, e.g. active_dcurve <- Weibull(beta=1,lambda=1)")
+  }
+
+#######
+# Start of main code
+#
 # Go through all strata in turn, simulating them. Add a column for the stratum number (currently 'temp'). All processing/output choices not done till later.
   outlist <- vector("list",nstrata)
   for(i in 1:nstrata){
     rcurve[[i]] <- setPatients(rcurve[[i]],Nactive=getNactive(rcurve[[i]])*stratum_probs[[i]],Ncontrol=getNcontrol(rcurve[[i]])*stratum_probs[[i]])
-    outlist[[i]] <- simulate_trials(active_ecurve=active_ecurve[[i]],control_ecurve=control_ecurve[[i]],active_dcurve=active_dcurve[[i]],control_dcurve=control_dcurve[[i]],rcurve=rcurve[[i]],assess=assess,iterations=iterations,seed=seed+i,fix_events=NULL,detailed_output=TRUE,output_type="matrix")
+    outlist[[i]] <- simulate_trials(active_ecurve=active_ecurve[[i]],control_ecurve=control_ecurve[[i]],active_dcurve=active_dcurve[[i]],control_dcurve=control_dcurve[[i]],rcurve=rcurve[[i]],assess=assess,iterations=iterations,seed=seed+i,fix_events=NULL,detailed_output=TRUE,output_type="matrix",Time=Time,Event=Event,censoringOne=censoringOne,Trt=Trt,Iter=Iter)
     temp <- rep(i,nrow(outlist[[i]]))
     outlist[[i]] <- cbind(outlist[[i]],temp)
   }
@@ -255,13 +282,13 @@ simulate_trials_strata <- function(stratum_probs,active_ecurve,control_ecurve,ac
   colnames(output)[which(colnames(output) == "temp")] <- stratum_name
 # Fix a set number of events if specified
   if(!is.null(fix_events)){
-    output <- set_event_number(data=output,events=fix_events,output_type=output_type,detailed_output=detailed_output)
+    output <- set_event_number(data=output,events=fix_events,output_type=output_type,detailed_output=detailed_output,Time=Time,Event=Event,censoringOne=censoringOne,Iter=Iter)
   } else {
     if(!detailed_output){
-      output <- output[,c("Time","Censored","Trt",stratum_name,"Iter")]
+      output <- output[,c(Time,Event,Trt,stratum_name,Iter)]
     }
     if(output_type=="list"){
-      output <- split.data.frame(as.matrix(subset(output,select=-Iter)),output[,"Iter"])
+      output <- split.data.frame(as.matrix(subset(output,select=-Iter)),output[,Iter])
     }
   }
   return(output)
@@ -270,12 +297,34 @@ simulate_trials_strata <- function(stratum_probs,active_ecurve,control_ecurve,ac
 #Internal function to apply a new assessment time to a simulation
 #Sets the assessment time, then updates all the other columns to reflect this
 #Function here just to avoid repetition in simulate_trials, set_event_number and set_assess_time
-update_times_assess <- function(data,assess){
-    data[,"Assess"] <- assess
-    data[,"RCTime"] <- pmin(data[,"Assess"] - data[,"Rec_Time"],data[,"Max_F"])
-    data[,"Time"] <- pmin.int(data[,"ETime"],data[,"CTime"],data[,"RCTime"])
-    data[,"Censored"] <- 1
-    data[data[,"Time"] == data[,"ETime"],"Censored"] <- 0
+################################################################################
+# update_times_assess ; Internal function to apply a new assessment time to a simulation
+#   Sets the assessment time, then updates all the other columns to reflect this
+#   Default column names correspond to standard simulate_trial defaults
+# Takes as mandatory input:
+#  data:	data set produced by the simulate_trials function
+#  assess:  new assessment time
+#  censoringOne: whether censorings are denoted by a 1 (TRUE) or 0 (FALSE)
+# Takes as optional inputs:
+#  Time:    time column name, default=Time
+#  Event:   censoring/event column name, default=Censored
+#  Assessname:     assessment time column name, default=Assess
+#  CTime: censoring column name, default=CTime
+#  ETime: event column name, default=ETime
+#  RCTime: recruitment censoring column name, default=RCTime
+#  Rec_Time: Recruitment time column name, default=Rec_Time
+#  Max_F: maximum patient follow-up column name, default=Max_F
+#
+################################################################################
+update_times_assess <- function(data,assess,censoringOne, Time=Time, Event=Event, Assessname="Assess", CTime="CTime", ETime="ETime", RCTime="RCTime", Rec_Time="Rec_Time", Max_F="Max_F"){
+    data[,Assessname] <- assess
+    data[,RCTime] <- pmin(data[,Assessname] - data[,Rec_Time],data[,Max_F])
+    data[,Time] <- pmin.int(data[,ETime],data[,CTime],data[,RCTime])
+    data[,Event] <- 0
+    data[data[,Time] == data[,ETime],Event] <- 1
+    if(censoringOne){
+      data[,Event] <- 1-data[,Event]
+    }
     return(data)
 }
 
@@ -287,10 +336,14 @@ update_times_assess <- function(data,assess){
 #' Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.
 #' It is therefore strongly recommended to initially simulate for at least the duration of the recruitment before fixing the event number.\cr
 #' This function can also be used to change format and/or slim down data for event-driven simulations.\cr
-#' @param data Output file from simulate_trials() or simulate_trials_strata() in either "list" or "matrix" format. Only these formats are supported.
+#' @param data Output file from simulate_trials() or simulate_trials_strata() created with detailed_output=TRUE, in either "list" or "matrix" format. Only these formats are supported.
 #' @param events Positive integer specifying the required number of events.
 #' @param output_type Choice of "input" (output in same format as input),"matrix" (matrix format output) or "list" (list format output). Default="input".
 #' @param detailed_output Boolean to require full details of timings of competing processes. If FALSE, the simplified data only includes the *'ed output columns - this approximately halves RAM requirements. Default=TRUE (detailed).
+#' @param Time String specifying the name of the time column. Default="Time"
+#' @param Event String specifying the name of the censoring/event column. Default="Censored" (and by default it is a censoring column unless censoringOne=FALSE)
+#' @param censoringOne Boolean specifying whether censoring is denoted in the censoring/event column by a one (TRUE) or zero (FALSE). Default=TRUE (censorings denoted by 1, events by 0)
+#' @param Iter String specifying the name of the iterations column. Default="Iter"
 #' @return Returns the input simulated trial, in either matrix or list format, with modified assessment times. All columns dependent on this are also updated.
 #' @author James Bell
 #' @examples example_sim <- simulate_trials(active_ecurve=Weibull(250,0.8),control_ecurve=Weibull(100,1),
@@ -298,19 +351,37 @@ update_times_assess <- function(data,assess){
 #'
 #' adjusted_examples <- set_event_number(data=example_sim,events=50)
 #' @export
-set_event_number <- function(data,events,output_type=c("input","matrix","list"),detailed_output=TRUE){
+set_event_number <- function(data,events,output_type=c("input","matrix","list"),detailed_output=TRUE,Time="Time",Event="Censored",censoringOne=TRUE,Iter="Iter"){
 
   #Required Input Check
   if(missing(data))stop("Please specify the name of the simulated data set ('data').")
   if(!exists("data"))stop("Error: specified data does not exist.")
-  if(missing(events))stop("Please specify the fixed number of events ('events').")
 
   #Multiple choice
   output_type <- match.arg(output_type)
+
+  #Strings
+  if(!testString(Time,is.single=TRUE))stop("Error: Time argument must be a single string: default='Time'.")
+  if(!testString(Event,is.single=TRUE))stop("Error: Event argument must be a single string: default='Censored'.")
+  if(!testString(Iter,is.single=TRUE))stop("Error: Iter argument must be a single string: default='Iter'.")
+
   #Boolean
-  if(!is.logical(detailed_output))stop("Error: detailed_output argument must be boolean: default=FALSE (simplified output).")
+  if(!testBoolean(detailed_output,is.flag=TRUE))stop("Error: detailed_output argument must be a boolean flag: default=FALSE (simplified output).")
+  if(!testBoolean(censoringOne,is.flag=TRUE))stop("Error: censoringOne argument must be a boolean flag: default=TRUE (1 is censored, 0 is event).")
+
   #Positive integer
-  if(!is.numeric(events) | events%%1!=0 | events < 1 ) stop("Required event number ('events') is not a positive integer.")
+  if(!testNumber(events, type = "positive", integer = TRUE, is.single=TRUE)) stop("Required event number ('events') is not a single positive integer.")
+
+  #Check data columns
+ if(is.matrix(data) |(!is.list(data) && is.data.frame(data))){
+    if(!(Time %in% colnames(data)))stop("Error: Specified time column does not exist: Check your data and the Time argument. Note, the default is 'Time'.")
+    if(!(Event %in% colnames(data)))stop("Error: Specified censoring/event column does not exist: Check your data and the Event argument. Note, the default is 'Censoring', with censoringOne set to TRUE.")
+    if(!(Iter %in% colnames(data)))stop("Error: Specified iteration column does not exist: Check your data and the Iter argument. Note, the default is 'Iter'.")
+  } else{
+    if(!is.list(data))stop("Error: Unrecognised data format.")
+    if(!(Time %in% colnames(data[[1]])))stop("Error: Specified time column does not exist: Check your data and the Time argument. Note, the default is 'Time'.")
+    if(!(Event %in% colnames(data[[1]])))stop("Error: Specified censoring/event column does not exist: Check your data and the Event argument. Note, the default is 'Censoring', with censoringOne set to TRUE.")
+  }
 
   additer <- FALSE
   if(is.list(data) && !is.data.frame(data)){
@@ -320,9 +391,9 @@ set_event_number <- function(data,events,output_type=c("input","matrix","list"),
     #if(output_type=="matrix"){additer <- TRUE}
     additer <- TRUE
   } else if(is.matrix(data) |(!is.list(data) & is.data.frame(data))){
-    if("Iter" %in% colnames(data)){
-      maxiter <- max(data[,"Iter"])
-      data1 <- split.data.frame(as.matrix(data),data[,"Iter"])
+    if(Iter %in% colnames(data)){
+      maxiter <- max(data[,Iter])
+      data1 <- split.data.frame(as.matrix(data),data[,Iter])
       input <- "matrix"
     } else {
       maxiter <- 1
@@ -340,18 +411,18 @@ set_event_number <- function(data,events,output_type=c("input","matrix","list"),
   newassess <- rep(NA,maxiter)
   for(i in 1:maxiter){
     iterdata <- data1[[i]]
-    possibles <- iterdata[iterdata[,"ETime"]<pmin(iterdata[,"CTime"],iterdata[,"Max_F"]),]
-    sorted <- sort(possibles[,"ETime"]-possibles[,"RCTime"])
+    possibles <- iterdata[iterdata[,"ETime"] < pmin(iterdata[,"CTime"],iterdata[,"Max_F"]),]
+    sorted <- sort(possibles[,"ETime"] - possibles[,"RCTime"])
     sortE <- length(sorted)
     if(sortE <= events){
       cutoff <- sorted[sortE]+0.0001
       warning("Only",sortE,"events are possible in simulation",i,"but ",events," have been requested. Setting assessment time to just after last event.\n")
     }else{cutoff <- sorted[events]+(sorted[events+1]-sorted[events])/1000}
     newassess[i] <- mean(iterdata[,"Assess"]) + cutoff
-    iterdata <- update_times_assess(data=iterdata,assess=(newassess[i]))
+    iterdata <- update_times_assess(data=iterdata,assess=(newassess[i]),censoringOne=censoringOne,Time=Time,Event=Event)
     if(additer){
-      Iter <- rep(i,nrow(iterdata))
-      iterdata <- cbind(iterdata,Iter)
+      Iteration <- rep(i,nrow(iterdata))
+      iterdata <- cbind(iterdata,Iter=Iteration)
     }
     results[[i]] <- iterdata
   }
@@ -365,7 +436,7 @@ set_event_number <- function(data,events,output_type=c("input","matrix","list"),
     if(input=="single"){
       return(list(out))
     } else{
-      return(split.data.frame(subset(out,select=-Iter),out[,"Iter"]))
+      return(split.data.frame(subset(out,select=-Iter),out[,Iter]))
     }
   } else {return(out)}
 }
@@ -378,10 +449,14 @@ set_event_number <- function(data,events,output_type=c("input","matrix","list"),
 #' Note that if recruitment had not finished in the input then any increases in assessment time cannot account for the missing patients.
 #' It is therefore strongly recommended to initially simulate for at least the duration of the recruitment before reducing the number to missing patients.\cr
 #' This function can also be used to change format and/or slim down data for time-driven simulations.\cr
-#' @param data Output file from simulate_trials() or simulate_trials_strata() in either "list" or "matrix" format. Only these formats are supported.
+#' @param data Output file from simulate_trials() or simulate_trials_strata() created with detailed_output=TRUE, in either "list" or "matrix" format. Only these formats are supported.
 #' @param time Positive number specifying the required assessment time.
 #' @param output_type Choice of "input" (output in same format as input),"matrix" (matrix format output) or "list" (list format output). Default="input".
 #' @param detailed_output Boolean to require full details of timings of competing processes. If FALSE, the simplified data only includes the *'ed output columns - this approximately halves RAM requirements. Default=TRUE (detailed).
+#' @param Time String specifying the name of the time column. Default="Time"
+#' @param Event String specifying the name of the censoring/event column. Default="Censored" (and by default it is a censoring column unless censoringOne=FALSE)
+#' @param censoringOne Boolean specifying whether censoring is denoted in the censoring/event column by a one (TRUE) or zero (FALSE). Default=TRUE (censorings denoted by 1, events by 0)
+#' @param Iter String specifying the name of the iterations column. Default="Iter"
 #' @return Returns the input simulated trial, in either matrix or list format, with modified assessment times. All columns dependent on this are also updated.
 #' @author James Bell
 #' @examples example_sim <- simulate_trials(active_ecurve=Weibull(250,0.8),control_ecurve=Weibull(100,1),
@@ -389,34 +464,51 @@ set_event_number <- function(data,events,output_type=c("input","matrix","list"),
 #'
 #' adjusted_example <- set_assess_time(data=example_sim,time=10)
 #' @export
-set_assess_time <- function(data,time,output_type=c("input","matrix","list"),detailed_output=TRUE){
+set_assess_time <- function(data,time,output_type=c("input","matrix","list"),detailed_output=TRUE,Time="Time",Event="Censored",censoringOne=TRUE,Iter="Iter"){
 
   #Required Input Check
   if(missing(data))stop("Please specify the name of the simulated data set ('data').")
-  if(missing(time))stop("Please specify the fixed assessment time ('time').")
 
   #Multiple choice
   output_type <- match.arg(output_type)
-  #Boolean
-  if(!is.logical(detailed_output))stop("Error: detailed_output argument must be boolean: default=FALSE (simplified output).")
-  #Positive number
-  if(!is.numeric(time)| time < 1 ) stop("Required event number ('time') is not a positive number.")
 
-  if(time < 0){stop("time must be a real, positive number.")}
-  output_type <- match.arg(output_type)
+  #Strings
+  if(!testString(Time,is.single=TRUE))stop("Error: Time argument must be a single string: default='Time'.")
+  if(!testString(Event,is.single=TRUE))stop("Error: Event argument must be a single string: default='Censored'.")
+  if(!testString(Iter,is.single=TRUE))stop("Error: Iter argument must be a single string: default='Iter'.")
+
+  #Boolean
+  if(!testBoolean(detailed_output,is.flag=TRUE))stop("Error: detailed_output argument must be a boolean flag: default=FALSE (simplified output).")
+  if(!testBoolean(censoringOne,is.flag=TRUE))stop("Error: censoringOne argument must be a boolean flag: default=TRUE (1 is censored, 0 is event).")
+
+  #Positive number
+  if(!testNumber(time, type = "positive", is.single=TRUE)) stop("Required assessment time ('time') is not a single positive number.")
+
+
+  #Check data columns
+ if(is.matrix(data) |(!is.list(data) && is.data.frame(data))){
+    if(!(Time %in% colnames(data)))stop("Error: Specified time column does not exist: Check your data and the Time argument. Note, the default is 'Time'.")
+    if(!(Event %in% colnames(data)))stop("Error: Specified censoring/event column does not exist: Check your data and the Event argument. Note, the default is 'Censoring', with censoringOne set to TRUE.")
+    if(!(Iter %in% colnames(data)))stop("Error: Specified iteration column does not exist: Check your data and the Iter argument. Note, the default is 'Iter'.")
+  } else{
+    if(!is.list(data))stop("Error: Unrecognised data format.")
+    if(!(Time %in% colnames(data[[1]])))stop("Error: Specified time column does not exist: Check your data and the Time argument. Note, the default is 'Time'.")
+    if(!(Event %in% colnames(data[[1]])))stop("Error: Specified censoring/event column does not exist: Check your data and the Event argument. Note, the default is 'Censoring', with censoringOne set to TRUE.")
+  }
+
   # Checks for list format
   if(is.list(data) && !is.data.frame(data)){
     if(!("ETime" %in% colnames(data[[1]])) | !("RCTime" %in% colnames(data[[1]]))|!("Rec_Time" %in% colnames(data[[1]])) |!("Assess" %in% colnames(data[[1]])) |!("CTime" %in% colnames(data[[1]])))stop("set_assess_time requires full, detailed simulation output. Please rerun simulate_trials with detailed_output=TRUE")
     maxiter <- length(data)
     input <- "list"
-    # If output is matrix, convert to matrix then change times in one go. May change to dplyr function later to remove loop
+    # If output is matrix, convert to matrix then change all times in one go. May change to dplyr function later to remove loop
     if(output_type=="matrix"){
       for(i in 1:maxiter){
-        Iter <- rep(i,nrow(data[[i]]))
-        data[[i]] <- cbind(data[[i]],Iter)
+        Iteration <- rep(i,nrow(data[[i]]))
+        data[[i]] <- cbind(data[[i]],Iter=Iteration)
       }
       data <- rbind(do.call("rbind",data))
-      data <- update_times_assess(data=data,assess=time)
+      data <- update_times_assess(data=data,assess=time,,censoringOne=censoringOne,Time=Time,Event=Event)
       data <- data[data[,"RCTime"]>=0,]
       if(!detailed_output){
         data <- subset(data,select=-c(ETime,Rec_Time,Assess,RCTime,CTime,Max_F))
@@ -426,7 +518,7 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
       # If output is list, change times in situ without converting to matrix and back (remove unwanted columns)
       if(!detailed_output){
         for(i in 1:maxiter){
-          data[[i]] <- update_times_assess(data=data[[i]],assess=time)
+          data[[i]] <- update_times_assess(data=data[[i]],assess=time,censoringOne=censoringOne,Time=Time,Event=Event)
           data[[i]] <- data[[i]][data[[i]][,"RCTime"]>=0,]
           data[[i]] <- subset(data[[i]],select=-c(ETime,Rec_Time,Assess,RCTime,CTime))
         }
@@ -435,7 +527,7 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
       } else {
       # If output is list, change times in situ without converting to matrix and back
         for(i in 1:maxiter){
-          data[[i]] <- update_times_assess(data=data[[i]],assess=time)
+          data[[i]] <- update_times_assess(data=data[[i]],assess=time,censoringOne=censoringOne,Time=Time,Event=Event)
           data[[i]] <- data[[i]][data[[i]][,"RCTime"]>=0,]
         }
         return(data)
@@ -444,19 +536,19 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
   } else if(is.matrix(data) |(!is.list(data) & is.data.frame(data))){
     # If input is in matrix format do everything necessary and then convert to required format at end
     if(!("ETime" %in% colnames(data)) | !("RCTime" %in% colnames(data))|!("Rec_Time" %in% colnames(data)) |!("Assess" %in% colnames(data)) |!("CTime" %in% colnames(data)))stop("set_assess_time requires full, detailed simulation output. Please rerun simulate_trials with detailed_output=TRUE")
-    if("Iter" %in% colnames(data)){
+    if(Iter %in% colnames(data)){
       input <- "matrix"
     } else {
       input <- "single"
     }
-      data <- update_times_assess(data=data,assess=time)
+      data <- update_times_assess(data=data,assess=time,censoringOne=censoringOne,Time=Time,Event=Event)
       data <- data[data[,"RCTime"]>=0,]
       if(!detailed_output){
         data <- subset(data,select=-c(ETime,Rec_Time,Assess,RCTime,CTime,Max_F))
       }
       if(output_type=="list"){
         if(input=="single"){return(list(data))}
-        return(split.data.frame(subset(data,select=-Iter),data[,"Iter"]))
+        return(split.data.frame(subset(data,select=-Iter),data[,Iter]))
       } else{
         return(data)
       }
@@ -474,7 +566,7 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
 #' Strata values are handled as factors, so continuous covariates are not supported.\cr
 #' Analysis is typically the slowest part of simulation studies, so parallel processing using the doParallel package is built in.
 #' Parallel processing is enabled by setting the number of cores in the "parallel_cores" argument.
-#' Use of parallel processing is recommended for largescale (e.g. 100,000 iteration) simulations. 
+#' Use of parallel processing is recommended for largescale (e.g. 100,000 iteration) simulations.
 #' To avoid unnecessary issues, ensure that the number of cores specified does not exceed number of threads provided by hardware.
 #' @param data Output file from simulate_trials(). Only simulate_trials() or simulate_trials_strata() output is supported, in either "list" or "matrix" format.
 #' @param LR Requests log-rank test and Cox regression. Default=TRUE
@@ -482,6 +574,11 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
 #' @param landmark Requests Landmark analysis at specified (positive integer) time, leave NULL for no analysis. Default=NULL (no landmark analysis).
 #' @param stratum Specify name of column of a stratification factor and turn on stratified (LR/LM) and covariate-adjusted (Cox/RMST) analysis. By default, "", and no stratification.
 #' @param parallel_cores Positive integer specifying number of cores to use. If 1 specified then no parallel processing. Default=1 (no parallel processing).
+#' @param Time String specifying the name of the time column. Default="Time"
+#' @param Event String specifying the name of the censoring/event column. Default="Censored" (and by default it is a censoring column unless censoringOne=FALSE)
+#' @param censoringOne Boolean specifying whether censoring is denoted in the censoring/event column by a one (TRUE) or zero (FALSE). Default=TRUE (censorings denoted by 1, events by 0)
+#' @param Trt String specifying the name of the treatment column. Default="Trt"
+#' @param Iter String specifying the name of the iterations column. Default="Iter"
 #' @return Returns a table with one row per simulation. Table contains the following columns:
 #' \itemize{
 #'  \item{"HR"}{ Cox Hazard Ratio (LR/Cox analysis only)}
@@ -516,8 +613,8 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
 #' @references Uno H, Claggett B, Tian L, Inoue E, Gallo P, Miyata T, Schrag D, Takeuchi M, Uyama Y, Zhao L,
 #'   Skali H, Solomon S, Jacobus S, Hughes M, Packer M, Wei LJ. Moving beyond the hazard ratio in
 #'   quantifying the between-group difference in survival analysis. Journal of clinical Oncology 2014,32, 2380-2385.
-#' Tian L, Zhao L, Wei LJ. Predicting the restricted mean event time with the subjects baseline covariates in survival analysis. 
-#'   Biostatistics 2014, 15, 222-233.  
+#' Tian L, Zhao L, Wei LJ. Predicting the restricted mean event time with the subjects baseline covariates in survival analysis.
+#'   Biostatistics 2014, 15, 222-233.
 #' @examples example_sim <- simulate_trials(active_ecurve=Weibull(250,0.8),control_ecurve=Weibull(100,1),
 #' rcurve=LinearR(12,100,100), assess=20,iterations=100,seed=12345,detailed_output=TRUE)
 #'
@@ -530,7 +627,7 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
 #'
 #' example_strat_analysis <- analyse_sim(data=example_strat_sim,RMST=15,landmark=15,stratum="Stratum")
 #' @export
-analyse_sim <- function(data, LR = TRUE, RMST = NA, landmark = NA, stratum="",parallel_cores=1){
+analyse_sim <- function(data, LR = TRUE, RMST = NA, landmark = NA, stratum="",parallel_cores=1,Time="Time",Event="Censored",censoringOne=TRUE,Trt="Trt",Iter="Iter"){
 # Check that the correct packages are installed for specific options.
 # If not, disable options
   if(parallel_cores!= 1 && !requireNamespace("doParallel", quietly = TRUE)) {
@@ -544,54 +641,64 @@ analyse_sim <- function(data, LR = TRUE, RMST = NA, landmark = NA, stratum="",pa
   if(missing(data))stop("Error: Please specify the name of the simulated data set ('data').")
 
   #Boolean
-  if(!is.logical(LR))stop("Error: 'LR' argument must be boolean: default=FALSE (perform log-rank and cox analysis).")
-  #Character
-  if(!is.character(stratum))stop("Error: 'stratum' argument must be a string: default=FALSE (perform log-rank and cox analysis).")
+  if(!testBoolean(LR, is.flag=TRUE))stop("Error: 'LR' argument must be boolean: default=FALSE (perform log-rank and cox analysis).")
+  if(!testBoolean(censoringOne, is.flag=TRUE))stop("Error: censoringOne argument must be boolean: default=TRUE (1 is censored, 0 is event).")
 
-  #Positive integer
-  if(!is.numeric(parallel_cores) || parallel_cores%%1!=0 || parallel_cores < 1 ) stop("Error: 'parallel_cores' argument is not a positive integer.")
+  #Positive numbers
+  if(!testNumber(parallel_cores, type = "positive", integer = TRUE, is.single=TRUE)) stop("Error: 'parallel_cores' argument is not a positive integer.")
   if(is.null(landmark)){landmark <- NA}
   if(is.null(RMST)){RMST <- NA}
-  if(!is.na(landmark) && (landmark%%1!=0 || landmark < 1 )) stop("Landmark analysis specified, but landmark time is not a positive integer.")
-  if(!is.na(RMST) && (RMST%%1!=0 || RMST < 1 )) stop("RMST analysis specified, but restriction time is not a positive integer.")
+  if(!is.na(landmark) && !testNumber(landmark, type = "positive", is.single=TRUE)) stop("Landmark analysis specified, but landmark time is not a single positive number.")
+  if(!is.na(RMST) && !testNumber(RMST, type = "positive", is.single=TRUE)) stop("RMST analysis specified, but restriction time is not a single positive number.")
+
+  #Strings
+  if(!testString(stratum, is.single=TRUE))stop("Error: 'stratum' argument must be a single string: default= '' (no stratum specified).")
+  if(!testString(Time,is.single=TRUE))stop("Error: Time argument must be a single string: default='Time'.")
+  if(!testString(Event,is.single=TRUE))stop("Error: Event argument must be a single string: default='Censored'.")
+  if(!testString(Trt,is.single=TRUE))stop("Error: Trt argument must be a single string: default='Trt'.")
+  if(!testString(Iter,is.single=TRUE))stop("Error: Iter argument must be a single string: default='Iter'.")
 
   #Format checks and...
   #If in matrix format, split single huge data frame into one per iteration
   #Hugely improves speed of function compared to using parts of parent
-  if(is.matrix(data) |(!is.list(data) & is.data.frame(data))){
-    if(!("Time" %in% colnames(data)))stop("Error: 'Time' column does not exist: data not in simulate_trials format.")
-    if(!("Censored" %in% colnames(data)))stop("Error: 'Censored' column does not exist: data not in simulate_trials format.")
-    if(!("Trt" %in% colnames(data)))stop("Error: 'Trt' column does not exist: data not in simulate_trials format.")
-    if(!("Iter" %in% colnames(data)))stop("Error: 'Iter' column does not exist: data not in simulate_trials format.")
-    data <- split.data.frame(as.matrix(data),data[,"Iter"])
+  if(is.matrix(data) |(!is.list(data) && is.data.frame(data))){
+    if(!(Time %in% colnames(data)))stop("Error: Specified time column does not exist: Check your data and the Time argument. Note, the default is 'Time'.")
+    if(!(Event %in% colnames(data)))stop("Error: Specified censoring/event column does not exist: Check your data and the Event argument. Note, the default is 'Censoring', with censoringOne set to TRUE.")
+    if(!(Trt %in% colnames(data)))stop("Error: Specified treatment column does not exist: Check your data and the Trt argument. Note, the default is 'Trt'.")
+    if(!(Iter %in% colnames(data)))stop("Error: Specified iteration column does not exist: Check your data and the Iter argument. Note, the default is 'Iter'.")
+    data <- split.data.frame(as.matrix(data),data[,Iter])
   } else{
     if(!is.list(data))stop("Error: Unrecognised data format.")
-    if(!("Time" %in% colnames(data[[1]])))stop("Error: 'Time' column does not exist: data not in simulate_trials format.")
-    if(!("Censored" %in% colnames(data[[1]])))stop("Error: 'Censored' column does not exist: data not in simulate_trials format.")
-    if(!("Trt" %in% colnames(data[[1]])))stop("Error: 'Trt' column does not exist: data not in simulate_trials format.")
+    if(!(Time %in% colnames(data[[1]])))stop("Error: Specified time column does not exist: Check your data and the Time argument. Note, the default is 'Time'.")
+    if(!(Event %in% colnames(data[[1]])))stop("Error: Specified censoring/event column does not exist: Check your data and the Event argument. Note, the default is 'Censoring', with censoringOne set to TRUE.")
+    if(!(Trt %in% colnames(data[[1]])))stop("Error: Specified treatment column does not exist: Check your data and the Trt argument. Note, the default is 'Trt'.")
   }
 
   #Set maximum iterations
   maxiter <- length(data)
+
   #If parallel processing requested, load parallel library and register cores
   if(parallel_cores>1){
     registerDoParallel(parallel_cores)
   }
-  # If log-rank / Cox analysis required, do it. Separate calls depending on whether parallel processing enabled or stratified analysis requested
+
+  # If log-rank / Cox analysis required, do it. Separate calls depending on whether parallel processing enabled or stratified analysis requested, or if censoring/event is 1
   if(LR){
+
     if(parallel_cores>1){
       if(stratum==""){
-        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages=c("survival"))%dopar% LR_analysis(i,data)
+        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages=c("survival"))%dopar% LR_analysis_event(i,data,Time,Event,Trt,censoringOne)
       } else {
-        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_cov_analysis", .packages=c("survival"))%dopar% LR_cov_analysis(i,data,stratum)
+        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_cov_analysis", .packages=c("survival"))%dopar% LR_cov_analysis_event(i,data,stratum,Time,Event,Trt,censoringOne)
       }
     } else{
       if(stratum==""){
-        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages="survival")%do% LR_analysis(i,data)
+        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_analysis", .packages="survival")%do% LR_analysis_event(i,data,Time,Event,Trt,censoringOne)
       } else {
-        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_cov_analysis", .packages="survival")%do% LR_cov_analysis(i,data,stratum)
+        out <- foreach(i=1:maxiter,.combine="rbind",.export="LR_cov_analysis", .packages="survival")%do% LR_cov_analysis_event(i,data,stratum,Time,Event,Trt,censoringOne)
       }
     }
+
     if(!is.matrix(out)){out <- t(out)}
     colnames(out) <- c("HR","LogHR","LogHR_SE","HR_Z","HR_P","LR_Z","LR_P","Events_Active","Events_Control")
 
@@ -607,15 +714,15 @@ analyse_sim <- function(data, LR = TRUE, RMST = NA, landmark = NA, stratum="",pa
   if(!is.na(RMST) || !is.na(landmark)){
     if(parallel_cores>1){
       if(stratum==""){
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_analysis")%dopar% RMST_LM_analysis(i,data,RMST,landmark)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_analysis")%dopar% RMST_LM_analysis(i,data,RMST,landmark,Time,Event,Trt,censoringOne)
       } else {
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_cov_analysis")%dopar% RMST_LM_cov_analysis(i,data,RMST,landmark,stratum)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.export="RMST_LM_cov_analysis")%dopar% RMST_LM_cov_analysis(i,data,RMST,landmark,stratum,Time,Event,Trt,censoringOne)
       }
     }else{
       if(stratum==""){
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.packages="gestate")%do% RMST_LM_analysis(i,data,RMST,landmark)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.packages="gestate")%do% RMST_LM_analysis(i,data,RMST,landmark,Time,Event,Trt,censoringOne)
       } else {
-        outRMST <- foreach(i=1:maxiter,.combine="rbind",.packages="gestate")%do% RMST_LM_cov_analysis(i,data,RMST,landmark,stratum)
+        outRMST <- foreach(i=1:maxiter,.combine="rbind",.packages="gestate")%do% RMST_LM_cov_analysis(i,data,RMST,landmark,stratum,Time,Event,Trt,censoringOne)
       }
     }
     if(!is.matrix(outRMST)){outRMST <- t(outRMST)}
@@ -628,22 +735,11 @@ analyse_sim <- function(data, LR = TRUE, RMST = NA, landmark = NA, stratum="",pa
     if(is.na(landmark)){outRMST <- outRMST[,1:9]}
     out <- if(LR){cbind(out,outRMST)} else{outRMST}
   }
+  if(parallel_cores>1){
+    doParallel::stopImplicitCluster()
+  }
   return(out)
 }
-
-
-
-
-################################################################################
-# survfit_fast ; Helper function for KM estimate production
-# Fast function for KM estimate production. Rate-limiting-step is the table call.
-# Should replicate output of survfit for KM estimate production
-#  time:   	time of events
-#  events:	event occurrence data 0 for censoring, 1 for event
-################################################################################
-
-
-
 
 #######################################################################################################
 #'Create lifetable quickly
@@ -679,32 +775,44 @@ survfit_fast <- function (time,events){
 }
 
 ################################################################################
-# LR_analysis ; Helper function for log-rank/Cox analysis in analyse_sim
+# LR_analysis_event ; Helper function for log-rank/Cox analysis in analyse_sim
 # Requires the 'survival' default R package to be pre-loaded
+# Note: this assumes the input is in terms of events, i.e. censorings=0, events=1
 # Takes as input:
 #  i:   	integer of simulation to be analysed
 #  data:	data set produced by the simulate_trials function
+#  Time:    time column name
+#  Event:   event column name
+#  Trt:     treatment column name
+#  censoringOne:     whether Event column is 1 for censorings (TRUE) or events (FALSE)
 ################################################################################
-LR_analysis <- function(i,data){
+LR_analysis_event <- function(i,data,Time,Event,Trt,censoringOne){
   iterdata <- data[[i]]
-  fit <- coxph.fit(x=matrix(iterdata[,"Trt"],ncol=1), y=Surv(iterdata[,"Time"],1-iterdata[,"Censored"]), strata=NULL, offset=NULL, init=NULL, control=coxph.control(), method = "breslow",rownames=1:nrow(iterdata))
-  output <- c(NA,fit$coefficients,fit$var,c(NA,NA),sqrt(fit$score)*sign(fit$coefficients[1]),NA,length(iterdata[(iterdata[,"Trt"]==2 & iterdata[,"Censored"]==0),1]),length(iterdata[(iterdata[,"Trt"]==1 & iterdata[,"Censored"]==0),1]))
+  events <- iterdata[,Event]+censoringOne*(1-2*iterdata[,Event])
+  fit <- coxph.fit(x=matrix(iterdata[,Trt],ncol=1), y=Surv(iterdata[,Time],events), strata=NULL, offset=NULL, init=NULL, control=coxph.control(), method = "breslow",rownames=1:nrow(iterdata))
+  output <- c(NA,fit$coefficients,fit$var,c(NA,NA),sqrt(fit$score)*sign(fit$coefficients[1]),NA,length(iterdata[(iterdata[,Trt]==2 & events==1),1]),length(iterdata[(iterdata[,Trt]==1 & events==1),1]))
 }
 
 ################################################################################
-# LR_cov_analysis ; Helper function for stratified log-rank/covariate-adjusted Cox analysis in analyse_sim
+# LR_cov_analysis_event ; Helper function for stratified log-rank/covariate-adjusted Cox analysis in analyse_sim
 # Requires the 'survival' default R package to be pre-loaded
+# Note: this assumes the input is in terms of events, i.e. censorings=0, events=1
 # Takes as input:
 #  i:   	integer of simulation to be analysed
 #  data:	data set produced by the simulate_trials function
 #  cov:     covariate column name
+#  Time:    time column name
+#  Event:   event column name
+#  Trt:     treatment column name
+#  censoringOne:     whether Event column is 1 for censorings (TRUE) or events (FALSE)
 ################################################################################
-LR_cov_analysis <- function(i,data,cov){
+LR_cov_analysis_event <- function(i,data,cov,Time,Event,Trt,censoringOne){
   iterdata <- data[[i]]
   covs <- length(cov)
-  analysis <- coxph(Surv(iterdata[,"Time"],1-iterdata[,"Censored"])~ iterdata[,"Trt"] + as.factor(iterdata[,cov]),ties="breslow")
-  analysisLR <- survdiff(Surv(iterdata[,"Time"],1-iterdata[,"Censored"])~ iterdata[,"Trt"] + strata(iterdata[,cov]))
-  output <- c(NA,coef(summary(analysis))[1,1],coef(summary(analysis))[1,3]^2,c(NA,NA),sqrt(analysisLR$chisq)*sign(sum(analysisLR$exp[1,])-sum(analysisLR$obs[1,])),NA,length(iterdata[(iterdata[,"Trt"]==2 & iterdata[,"Censored"]==0),1]),length(iterdata[(iterdata[,"Trt"]==1 & iterdata[,"Censored"]==0),1]))
+  events <- iterdata[,Event]+censoringOne*(1-2*iterdata[,Event])
+  analysis <- coxph(Surv(iterdata[,Time],events)~ iterdata[,Trt] + as.factor(iterdata[,cov]),ties="breslow")
+  analysisLR <- survdiff(Surv(iterdata[,Time],events)~ iterdata[,Trt] + strata(iterdata[,cov]))
+  output <- c(NA,coef(summary(analysis))[1,1],coef(summary(analysis))[1,3]^2,c(NA,NA),sqrt(analysisLR$chisq)*sign(sum(analysisLR$exp[1,])-sum(analysisLR$obs[1,])),NA,length(iterdata[(iterdata[,Trt]==2 & events==1),1]),length(iterdata[(iterdata[,Trt]==1 & events==1),1]))
 }
 
 ###############################################################################
@@ -716,9 +824,12 @@ LR_cov_analysis <- function(i,data,cov){
 #  data:	data set produced by the simulate_trials function
 #  restriction: positive value for restriction time for RMST analysis (NA for do not calculate)
 #  landmark: positive value for landmark analysis time (NA for do not calculate)
+#  Time:    time column name
+#  Event:   event column name
+#  censoringOne: censorings are denoted by 1 in Event column (TRUE/FALSE)
+#  Trt:     treatment column name
 ###############################################################################
-RMST_LM_analysis <- function(i,data,restriction=NA,landmark=NA){
-
+RMST_LM_analysis <- function(i,data,restriction=NA,landmark=NA,Time,Event,Trt,censoringOne){
 
   #Inner function for calculating rmst and lm with no covariates.
   #By combining rmst and lm calculations, avoid duplicating rate-limiting tabulation step
@@ -755,7 +866,7 @@ RMST_LM_analysis <- function(i,data,restriction=NA,landmark=NA){
 
     tab1 <- survfit_fast(time[arm == 1],status[arm == 1])
     tab0 <- survfit_fast(time[arm == 0],status[arm == 0])
- 
+
     if(!is.na(restriction) && maxT0 >= restriction){
       wk0 <- rmst_fast(tab0, restriction)
     } else {
@@ -788,7 +899,9 @@ RMST_LM_analysis <- function(i,data,restriction=NA,landmark=NA){
   }
 
   iterdata <- data[[i]]
-  analysis <- rmst_lm(time=iterdata[,"Time"], status=1-iterdata[,"Censored"], arm=iterdata[,"Trt"]-1, restriction = restriction,landmark=landmark)
+
+  analysis <- rmst_lm(time=iterdata[,Time], status=iterdata[,Event]+censoringOne*(1-2*iterdata[,Event]), arm=iterdata[,Trt]-1, restriction = restriction,landmark=landmark)
+
   return(c(restriction,analysis$RMST.arm1,analysis$RMST.arm0,analysis$RMST.diff,c(NA,NA),landmark,analysis$LM.arm1,analysis$LM.arm0,analysis$LM.diff,c(NA,NA)))
 }
 
@@ -801,10 +914,14 @@ RMST_LM_analysis <- function(i,data,restriction=NA,landmark=NA){
 #  restriction: positive value for restriction time for RMST analysis
 #  landmark: positive value for landmark analysis time (NA for do not calculate)
 #  stratum: name of stratum column
+#  Time:    time column name
+#  Event:   event column name
+#  censoringOne: censorings are denoted by 1 in Event column (TRUE/FALSE)
+#  Trt:     treatment column name
 ###############################################################################
-RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
+RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum,Time,Event,Trt,censoringOne){
 
-  #Core function for calculating RMST with covariates. Supports class covariates. 
+  #Core function for calculating RMST with covariates. Supports class covariates.
   rmstcov <- function (time, status, arm, restriction, covariates){
 
     #rmstcovreg is the inner function used for performing the regression for calculating RMST with covariates
@@ -815,7 +932,7 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
         yv <- pmin(y, restriction)
         ev <- status
         ev[yv == restriction] <- 1
-        
+
         isarm1 <- arm == 1
         yv1 <- yv[isarm1]
         yord1 <- order(yv1)
@@ -854,7 +971,7 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
         part2_1 <- tab1*(1-ev1)/yv1loc
         p3temp11 <- part2_1/yv1loc
         for(i in 1:ncovariates){
-          p3temp21[,i] <- cumsum(p3temp11[,i]) 
+          p3temp21[,i] <- cumsum(p3temp11[,i])
         }
         part3_1 <- p3temp21[yv1forward,]
         arm1 <- score1+part2_1-part3_1
@@ -873,7 +990,7 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
         p3temp10 <- part2_0/yv0loc
 
         for(i in 1:ncovariates){
-          p3temp20[,i] <- cumsum(p3temp10[,i]) 
+          p3temp20[,i] <- cumsum(p3temp10[,i])
         }
         part3_0 <- p3temp20[yv0forward,]
         arm0 <- score0+part2_0-part3_0
@@ -940,7 +1057,7 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
       store  <- colSums(t(stratum)*pi^((1:ncol(stratum))-1))
       stratum <- match(store,unique(store))
     }
- 
+
     ustrat <- unique(stratum)
     nstrat <- length(ustrat)
     if(nstrat<1)stop("Error: No strata have been specified")
@@ -973,21 +1090,15 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
 
   iterdata <- data[[i]]
   if(!is.na(restriction)){
-    results <- rmstcov(time=iterdata[,"Time"],status=1-iterdata[,"Censored"],arm=iterdata[,"Trt"]-1,restriction=restriction,covariates=as.factor(iterdata[,stratum]))
+    results <- rmstcov(time=iterdata[,Time],status=iterdata[,Event]+censoringOne*(1-2*iterdata[,Event]),arm=iterdata[,Trt]-1,restriction=restriction,covariates=as.factor(iterdata[,stratum]))
     rmst <- c(restriction,results$RMST.arm1,results$RMST.arm0,results$RMST.diff,c(NA,NA))
   } else {rmst <- rep(NA,9)}
   if(!is.na(landmark)){
-    analysis <- lm_cov(time=iterdata[,"Time"], status=1-iterdata[,"Censored"], arm=iterdata[,"Trt"]-1, stratum=iterdata[,stratum],landmark=landmark)
+    analysis <- lm_cov(time=iterdata[,Time], status=iterdata[,Event]+censoringOne*(1-2*iterdata[,Event]), arm=iterdata[,Trt]-1, stratum=iterdata[,stratum],landmark=landmark)
     lm <- c(landmark,analysis$LM.arm1,analysis$LM.arm0,analysis$LM.diff,c(NA,NA))
   } else {lm <- rep(NA,9)}
   return(c(rmst,lm))
 }
-
-
-
-
-
-
 
 #######################################################################################################
 #'Summarise analyses of simulations of time-to-event data using arbitrary event, censoring and recruitment distributions.
@@ -1046,7 +1157,7 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum){
 summarise_analysis <- function(analysed_results,alpha1=0.025){
   #Check argument existence
   if(missing(analysed_results))stop("Error: Please specify the name of the analysis results dataset ('analysed_results').")
-  if(!is.numeric(alpha1) || alpha1 <= 0 || alpha1 > 0.5 ) stop("Please specify a positive one-sided alpha less than 0.5 using the 'alpha1' argument.")
+  if(!testProbability(alpha1, is.single=TRUE) || alpha1 > 0.5) stop("Error: 'alpha1' argument is not a valid one-sided alpha value (positive value < 0.5).")
 
   #Set default to not analyse anything
   LR <- FALSE

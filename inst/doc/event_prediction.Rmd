@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 ### 1.1 Vignette Overview
 The gestate package is designed to assist accurate planning and event prediction for time-to-event clinical trials. In this vignette, we introduce event prediction in the gestate package. A separate vignette ("trial_planning") introduces gestate and its trial planning tools.
 
-Section 2 will look at the two available methods for fitting parametric curves to existing data. Section 3 will then look at event prediction using these techniques.
+Section 2 will look at the two available frequentist methods for fitting parametric curves to existing data. Section 3 will then look at event prediction using these techniques. Section 4 will focus on a Bayesian Weibull approach for curve fitting and how this can be used for event prediction.
 
 ### 1.2 Event Prediction
 
@@ -110,9 +110,11 @@ Both fitting functions return a list with the type of Curve that has been fit, t
 
 ### 3.1 Introduction
 
-The event_prediction function uses a combination of fit_tte_data and the numerical integration approaches found in nph_traj to produce estimates for event numbers at any given time point. There are four main inputs required for event prediction: Firstly a patient-level data set from which an event Curve can be estimated ('data'). Secondly, an RCurve reflecting the combined already-observed recruitment and predicted future recruitment ('rcurve'). Thirdly, a Curve reflecting the dropout censoring in the trial ('dcurve'). Finally, optionally, a set of parameters describing what has actually been observed at an observed time point, to allow for conditional predictions; these are described in section 3.5. 
+The event_prediction function uses a combination of fit_tte_data and the numerical integration approaches found in nph_traj to produce estimates for event numbers at any given time point. There are four main inputs required for event prediction: Firstly a patient-level data set from which an event Curve can be estimated ('data'). Secondly, an RCurve reflecting the combined already-observed recruitment and predicted future recruitment ('rcurve'). Thirdly, a Curve reflecting the dropout censoring in the trial ('dcurve'). Finally, optionally, a set of parameters describing what has actually been observed at an observed time point, to allow for conditional predictions; these are described in section 3.5.
 
-Particular care should be paid to time units since measured event times are typically in days, while recruitment and timeline planning are typically in months (see section 3.2 for more on time units). event_prediction assumes that all times are in units of months, except for the event times, which may be in units of days (default) or months; this choice is controlled by the optional 'units' argument.
+In general, it is not recommended to use an exponential curve fit to base event predictions on since this imposes a strong constraint of constant event rates. This can result in poor curve fitting, over-precision of prediction intervals, and unnecessary bias in the estimates. 
+
+Particular care should be paid to time units since measured event times are typically in days, while recruitment and timeline planning are typically in months (see section 3.2 for more on time units). event_prediction assumes that all times are in units of months, except for the event times, which may be in units of days (default) or months; this choice is controlled by the optional 'units' argument. gestate assumes a conversion factor between months and days of 365.25/12. As a workaround for cases where other units are desirable, if the 'units' argument is set to months and all times for all variables are provided in the same unit, then no conversions are done and all output units will remain in the unit of the originally provided data. 
 
 ### 3.2 Event Curve Fitting
 
@@ -240,3 +242,83 @@ plot_km_fit(fit=predictions3,data=trial_mature, Event="Censored",censoringOne=TR
 
 ```
 From visual inspection, in all three cases there is reasonable agreement between the KM and fitted curves (albeit there is not much data at 10 months). This ensures their predictions are likely to at least be plausible. The width of the confidence interval using 10 months data is roughly double that for 18 months data. It is clear that the 10-month time point gives very little confidence about the Survival function when extrapolating. However, the 14 and 18 month time points provide some information about likely future behaviour, so do appear to be potentially useful for event prediction as long as the assumption of a Weibull distribution is reasonable.
+
+## 4 Prior Data Integration Approach
+### 4.1 Introduction
+When planning trials, we generally assume particular event, recruitment and dropout rates. In the early stages of a trial, when there are few events, such assumptions are typically the best source of information about the future trajectory in a trial, and it is desirable to integrate these assumptions with the data that is available so far. Without such assumptions, sufficiently accurate regression to give useful predictions is commonly not possible until approximately 100 events have been observed. For many trials, this may not be feasible or useful as either they may have low target event numbers, or they may need to make early predictions.
+
+To smooth the transition from using planning assumptions to observed data, while allowing meaningful predictions to be made at early stages in the trial, an approach to Weibull regression that integrates prior data has been added in gestate v1.6.0. This allows prior assumptions to be included into the Weibull regression and subsequent event prediction via a weighted prior patient data set. 
+
+Where an existing patient-level data set is available, this may be used directly. Where it is not, and only a summary distribution is known, the first step is to create an appropriate data set with the required characteristics.
+
+### 4.1 Creation of Prior Patient-Level Data: create_tte_prior
+The create_tte_prior data set takes as inputs a distribution (specified as a Curve object via 'curve'), the length of time over which prior events were observed ('duration'), and the number of these prior events ('events'). From these, it creates patient-level data with the requisite properties.
+
+Below is an example creating such a data set the peforming Weibull regression to show the data meets the desired distribution 
+
+```{r}
+
+example_data_prior <- create_tte_prior(curve=example_distribution,duration=100,events=100)
+head(example_data_prior)
+tail(example_data_prior)
+fit3 <- fit_tte_data(data=example_data_prior,Time="Time",type="Weibull")
+fit3$Parameters
+  
+```
+
+One thing to be careful about when creating such a data set is that the created data fits the required distribution without any noise. Consequently,if the prior is used in conjunction with an observed set of data that is very similar, it could lead to over-precision in the fitting. To avoid this, it is recommended to either not use a Weibull (or exponential) distribution when creating the prior (so the prior data will not perfectly fit the shape of a Weibull curve), or to use considerable down-weighting of the prior when performing the fit.
+
+A few output customisation options are available within the function: The 'Event' and 'Time' arguments allow the default column names to be changed, and the 'censoringOne' parameter allows a change from the default of censoring=0 (i.e. events = 1).
+
+### 4.2 Weibull Curve Fitting with Weighted Prior Data: fit_tte_data_prior
+
+The fit_tte_data_prior function performs Weibull curve fitting using prior patient-level data. Currently, it does not support exponential or log-normal curve fitting.
+
+This function performs maximum likelihood estimation on the pooled observed and prior data, essentially implementing Weibull regression with optional weights applied to the prior data.
+
+The function is analogous to the fit_tte_data function with many of the same arguments, and similar outputs. In addition to the arguments of fit_tte_data, 'priordata', 'priorTime', 'priorEvent', 'priorcensoringOne' and 'priorweight' are also added. 'priordata' is a required argument that specifies the data set containing the prior patient level data. 'priorTime', 'priorEvent' are analogous to 'Time' and 'Event' for specifying column names, but for the prior data set. By default they assume whatever values have been supplied (or used by default) in the 'Time' and 'Event' arguments, so only need to be specified if column names differ between data sets. Similarly, 'priorcensoringOne' also defaults to the value of 'censoringOne', and only needs to be set if there is a difference between data sets in the definition of Events / Censorings. 
+
+Finally, 'priorweight' specifies the weighting to be applied to the prior data set. This typically assumes a value between 0 and 1, with 0 meaning no weight at all is given to the prior data (i.e. only observed data is used), and 1 meaning equal weight is applied (i.e. essentially the prior and observed data is exchangeable). Values between 0 and 1 imply a down weighting of the prior data, so that each prior patient only counts as a fraction of a patient in the observed data. By default, 'priorweight' assumes the value 1, i.e. exchangeability with observed data.
+
+In general it is recommended to down weight historical data so that the number of events represents both a low percentage of the final target number of events and a relatively low absolute number (< 100). Doing so ensures that when there are few observed events, reasonable event prediction is possible. Conversely, as the data maturity increases, the observed data will outweigh the prior data, ensuring that differences are correctly accounted for, and over-precision of estimates is avoided.
+
+
+### 4.3 Weibull Event Prediction with Weighted Prior Data: event_prediction_prior
+
+The event_prediction_prior function performs Weibull event prediction using optionally-weighted prior patient-level data. Currently, it does not support exponential or log-normal curve fitting. More details on the curve fitting can be found above in section 4.2. 
+
+The event_prediction_prior function is analogous, and very similar, to the event_prediction function (see section 3 for full details), but with the additional ability to integrate prior data. As with the fit_tte_data_prior curve fitting function, there are several new arguments 'priordata', 'priorTime', 'priorEvent', 'priorcensoringOne' and 'priorweight'.
+
+'priordata' contains the name of the prior data set. 'priorTime', 'priorEvent', 'priorcensoringOne' default to 'Time', 'Event' and 'censoringOne' values respectively, but may be independently set if there are discrepancies in the naming conventions between the 'data' and 'priordata' sets.
+
+'priorweight' specifies the weighting to be applied to the prior data set. This typically assumes a value between 0 and 1, with 0 meaning no weight at all is given to the prior data (i.e. only observed data is used), and 1 meaning equal weight is applied (i.e. essentially the prior and observed data is exchangeable). Values between 0 and 1 imply a down weighting of the prior data, so that each prior patient only counts as a fraction of a patient in the observed data. By default, 'priorweight' assumes the value 1, i.e. exchangeability with observed data.
+
+In general it is recommended to down weight historical data so that the number of events represents both a low percentage of the final target number of events and a relatively low absolute number (< 100). Doing so ensures that when there are few observed events, reasonable event prediction is possible. Conversely, as the data maturity increases, the observed data will outweigh the prior data, ensuring that differences are correctly accounted for, and over-precision of estimates is avoided.
+
+### 4.4 Weibull Event Prediction with Weighted Prior Data Example
+
+We start with the same example as in 3.10, where events are drawn from a Weibull(50,0.8) distribution. However, we now also assume that we have information from a previous trial, which had 200 events over 36 months with a fitted Weibull(60,0.7) distribution. This historical information is first turned into a patient-level set of data: 
+
+```{r}
+prior <- create_tte_prior(curve=Weibull(50,0.8),duration=36,events=200, Event="Censored", censoringOne=TRUE)
+```
+
+Event prediction can then be performed using the same inputs as for the example in 3.10, but also including the prior data. Since the previous trial data may not be exactly comparable, and since we don't want historical data to overpower that from the current trial, we downweight the historical data using a factor of 0.25, to give an effective number of events of 50:
+
+```{r}
+
+predictions_prior <- event_prediction_prior(data=trial_short, priordata=prior, priorweight=0.25, Event="Censored", censoringOne=TRUE, type="Weibull", rcurve=recruit, max_time=60, cond_Events=49, cond_NatRisk=451, cond_Time=10, units="Months")
+
+```
+
+The trajectory predictions for the prior data approach can then be plotted, along with as a comparison the original one that uses observed data only:
+
+```{r, fig.show='hold',fig.height = 5, fig.width = 7, fig.align = "center"}
+# Plot observed events and conditional predictions
+plot_ep(predictions,trajectory="conditional",which_PI="conditional",max_time=40,observed=events,target=200,max_E=200,main="Kaplan Meier Curve Fit Plot: 10 Months, No Prior Information")
+plot_ep(predictions_prior,trajectory="conditional",which_PI="conditional",max_time=40,observed=events,target=200,max_E=200,main="Kaplan Meier Curve Fit Plot: 10 Months, Prior Information")
+```
+Including the prior data, even with relatively low weight, greatly increases the precision of the predictions, although still leaving an interval width of approximately a year. This highlights an inherent issue with making event predictions with immature data, even with prior information about the underlying distribution of events, namely that event occurrence is a random process and the further you are from trial completion, the greater the wider the distribution of times to completion. 
+
+A second issue that arises specifically in the case of using prior information is that the more relative weight is put onto the prior information, the greater the bias caused if the prior information does not completely align with the 'true' distribution for the trial requiring event prediction. Worse, as more weight is put on it, so the confidence in prediction increases, so the coverage of the prediction intervals becomes increasingly poor. It is important therefore to not put excessive weight on prior information, and when setting weightings, to account for not only the size of the previous trial(s), but also the degree of their similarity to the current trial. This needs to account not just for similarity of patient population, but also differences in standard of care that can arise over even relatively short periods of time in certain clinical conditions.
+

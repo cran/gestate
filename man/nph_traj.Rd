@@ -112,9 +112,9 @@ The function uses numerical integration across event, censoring and recruitment 
 From these, it estimates an expected HR, with the same interpretation as that found using Cox regression, using the Pike method.
 The estimated event numbers and HR can be used to calculate power by one of several methods, including the Schoenfeld and Frontier methods.
 A separate, direct, power calculation can also be performed using the log-rank test formula and its Z-distribution.\cr
-To assist sample size finding, the function will also optionally estimate the required sample size to reach a given power 
+To assist sample size finding, the function will also optionally estimate the required sample size to reach a given power
 keeping all variables other than recruitment.\cr
-Expected RMST and landmark analysis properties may also be calculated. This also uses numerical integration techniques. 
+Expected RMST and landmark analysis properties may also be calculated. This also uses numerical integration techniques.
 Power is also then estimated for such analyses.\cr
 }
 \examples{
@@ -124,7 +124,7 @@ active_ecurve=Weibull(250,0.8))
 \references{
 Bell J, Accurate Sample Size Calculations in Trials with Non-Proportional Hazards, 2018, presentation at PSI Conference.
 \url{https://www.psiweb.org/docs/default-source/default-document-library/james-bell-slides.pdf?sfvrsn=3324dedb_0}
-Bell J, Power Calculations for Time-to-Event Trials Using Predicted Event Proportions, 2019, paper under review.
+Bell J, Power Calculations for Time-to-Event Trials Using Predicted Event Proportions, 2019, unpublished.
 Ruehl J, Sample Size Calculation in Time-To-Event Trials with Non-Proportional Hazards Using GESTATE, 2018, BSc thesis at University of Ulm.
 Pike MC, Contribution to discussion in Asymptotically efficient rank invariant test procedures by Peto R and Peto J,
 Journal of the Royal Statistical Society Series A, 135(2), 201-203.

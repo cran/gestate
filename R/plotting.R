@@ -281,6 +281,7 @@ plot_ep <- function(data,trajectory=c("both","conditional","unconditional"),whic
 #' @param CI_lty Line type for CI Default=2 (dashed)
 #' @param no_legend Boolean to turn off legend. Default is FALSE; legend shown.
 #' @param legend_position String with "top_right", or "bottom_left", corresponding to legend position in power plot. (Default="bottom_left").
+#' @param overlay Boolean whether to overlay on existing plot (vs start a new one). Default=FALSE
 #' @param ... Additional graphical parameters.
 #' @return Returns NULL
 #' @author James Bell
@@ -301,7 +302,7 @@ plot_ep <- function(data,trajectory=c("both","conditional","unconditional"),whic
 #' plot_km_fit(fit=predictions,data=trial_short,Event="Censored",censoringOne=TRUE,maxT=70)
 #' 
 #' @export
-plot_km_fit <- function(fit,data,Time="Time",Event="Event",censoringOne=FALSE,CI=0.95,colour_CI=TRUE,maxT=NULL,xlim=NULL,ylim=c(0,1),main="Kaplan Meier Curve Fit Plot",fit_col=2,km_col=1,area_col="skyblue",CI_col=4,CI_lty=2,no_legend=FALSE,legend_position=c("bottom_left","top_right"),...){
+plot_km_fit <- function(fit,data,Time="Time",Event="Event",censoringOne=FALSE,CI=0.95,colour_CI=TRUE,maxT=NULL,xlim=NULL,ylim=c(0,1),main="Kaplan Meier Curve Fit Plot",fit_col=2,km_col=1,area_col="skyblue",CI_col=4,CI_lty=2,no_legend=FALSE,legend_position=c("bottom_left","top_right"),overlay=FALSE,...){
 
 # Input checks to ensure valid inputs
 # Firstly check for missing variables
@@ -389,7 +390,11 @@ plot_km_fit <- function(fit,data,Time="Time",Event="Event",censoringOne=FALSE,CI
 #Estimate CIs using beta distribution with known moments
   limits <- estBetaCIs(central,variance,CI)
 
-  plot(temp,xlab="Patient Time",ylab="S(t)",xlim=xlim,ylim=ylim,conf.int=FALSE,main=main,col=km_col,...)
+  if(overlay){
+    lines(temp,conf.int=FALSE,col=km_col,...)
+  } else {
+    plot(temp,xlab="Patient Time",ylab="S(t)",xlim=xlim,ylim=ylim,conf.int=FALSE,main=main,col=km_col,...)
+  }
 
   if(legend_position=="top_right"){
     xpos <- 0.6

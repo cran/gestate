@@ -87,6 +87,29 @@ setMethod(f="getPDFfunction", signature="Curve",definition=function(theObject,x=
 })
 
 ######################################################################################################
+#'Method for evaluating the PDF function for a Curve object at x
+#'
+#' This numerically evaluates the PDF function of the Curve object at the specified x
+#' @param theObject The name of the Curve Object
+#' @param ... Pass-through arguments
+#' @examples evaluatePDFfunction(Weibull(100,1),10)
+#' @export
+setGeneric(name="evaluatePDFfunction", def=function(theObject,...) {
+  standardGeneric("evaluatePDFfunction")
+})
+
+#'Method for evaluating the PDF function for a Curve object at x
+#'
+#' This numerically evaluates the PDF function of the Curve object at the specified x
+#' @param theObject The name of the Curve Object
+#' @param x The time to evaluate at
+#' @examples evaluatePDFfunction(Weibull(100,1),10)
+#' @export
+setMethod(f="evaluatePDFfunction", signature="Curve",definition=function(theObject,x){
+  return( eval(parse(text=getPDFfunction(theObject)))  )
+})
+
+######################################################################################################
 #'Method for returning the CDF function for a Curve object
 #'
 #' This retrieves the full CDF function of the Curve object as a string
@@ -97,6 +120,7 @@ setMethod(f="getPDFfunction", signature="Curve",definition=function(theObject,x=
 setGeneric(name="getCDFfunction", def=function(theObject,...) {
   standardGeneric("getCDFfunction")
 })
+
 #'Method for returning the CDF function for a Curve object
 #'
 #' This retrieves the CDF function of the specified Curve object as a string
@@ -124,6 +148,7 @@ setMethod(f="getCDFfunction", signature="Curve",definition=function(theObject,q=
 setGeneric(name="evaluateCDFfunction", def=function(theObject,...) {
   standardGeneric("evaluateCDFfunction")
 })
+
 #'Method for evaluating the CDF function for a Curve object at q
 #'
 #' This numerically evaluates the CDF function of the Curve object at the specified q
@@ -603,8 +628,9 @@ setGeneric(name="plotCDF", def=function(theObject,...) {
 #'
 #' This plots a Curve CDF
 #' @param theObject The name of the RCurve Object
-#' @param overlay Boolean whether to overlay on existing one (vs start a new one). Default=FALSE
+#' @param overlay Boolean whether to overlay on existing plot (vs start a new one). Default=FALSE
 #' @param maxT Maximum time to plot up to. Default=100
+#' @param maxCDF Maximum CDF to plot up to. Default=1
 #' @param increment Plotting time increment. Default=0.1
 #' @param xlab X-axis label. Default="Time"
 #' @param ylab Y-axis label. Default="CDF"
@@ -615,13 +641,13 @@ setGeneric(name="plotCDF", def=function(theObject,...) {
 #' plotCDF(Weibull(100,1),xlab="Test x label",maxT=60)
 #' plotCDF(Weibull(80,0.8),overlay=TRUE,col=2,lty=2)
 #' @export
-setMethod(f="plotCDF", signature="Curve",definition=function(theObject,overlay=FALSE,maxT=100,increment=0.1,xlab="Time",ylab="CDF",main="CDF plot",type="l",...){
+setMethod(f="plotCDF", signature="Curve",definition=function(theObject,overlay=FALSE,maxT=100,maxCDF=1,increment=0.1,xlab="Time",ylab="CDF",main="CDF plot",type="l",...){
   q <- seq(from=0,to=maxT,by=increment)
   y <- evaluateCDFfunction(theObject,q)
   if(overlay){
     lines(q,y,type=type,...)
   } else{
-    plot(q,y,xlim=c(0,maxT),ylim=c(0,1),xlab=xlab,ylab=ylab,main=main,type=type,...)
+    plot(q,y,xlim=c(0,maxT),ylim=c(0,maxCDF),xlab=xlab,ylab=ylab,main=main,type=type,...)
   }
 })
 
@@ -645,6 +671,7 @@ setGeneric(name="plotSF", def=function(theObject,...) {
 #' @param theObject The name of the RCurve Object
 #' @param overlay Boolean whether to overlay on existing one (vs start a new one). Default=FALSE
 #' @param maxT Maximum time to plot up to. Default=100
+#' @param minSF Minimum SF to plot down to. Default=0
 #' @param increment Plotting time increment. Default=0.1
 #' @param xlab X-axis label. Default="Time"
 #' @param ylab Y-axis label. Default="S(t)"
@@ -655,13 +682,13 @@ setGeneric(name="plotSF", def=function(theObject,...) {
 #' plotSF(Weibull(100,1),xlab="Test x label",maxT=60)
 #' plotSF(Weibull(80,0.8),overlay=TRUE,col=2,lty=2)
 #' @export
-setMethod(f="plotSF", signature="Curve",definition=function(theObject,overlay=FALSE,maxT=100,increment=0.1,xlab="Time",ylab="S(t)",main="Kaplan Meier plot",type="l",...){
+setMethod(f="plotSF", signature="Curve",definition=function(theObject,overlay=FALSE,maxT=100,minSF=0,increment=0.1,xlab="Time",ylab="S(t)",main="Kaplan Meier plot",type="l",...){
   q <- seq(from=0,to=maxT,by=increment)
   y <- evaluateCDFfunction(theObject,q)
   if(overlay){
     lines(q,1-y,type=type,...)
   } else{
-    plot(q,1-y,xlim=c(0,maxT),ylim=c(0,1),xlab=xlab,ylab=ylab,main=main,type=type,...)
+    plot(q,1-y,xlim=c(0,maxT),ylim=c(minSF,1),xlab=xlab,ylab=ylab,main=main,type=type,...)
   }
 })
 

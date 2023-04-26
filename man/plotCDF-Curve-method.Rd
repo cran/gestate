@@ -8,6 +8,7 @@
   theObject,
   overlay = FALSE,
   maxT = 100,
+  maxCDF = 1,
   increment = 0.1,
   xlab = "Time",
   ylab = "CDF",
@@ -19,9 +20,11 @@
 \arguments{
 \item{theObject}{The name of the RCurve Object}
 
-\item{overlay}{Boolean whether to overlay on existing one (vs start a new one). Default=FALSE}
+\item{overlay}{Boolean whether to overlay on existing plot (vs start a new one). Default=FALSE}
 
 \item{maxT}{Maximum time to plot up to. Default=100}
+
+\item{maxCDF}{Maximum CDF to plot up to. Default=1}
 
 \item{increment}{Plotting time increment. Default=0.1}
 

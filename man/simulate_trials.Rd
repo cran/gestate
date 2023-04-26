@@ -15,7 +15,12 @@ simulate_trials(
   iterations,
   seed,
   detailed_output = FALSE,
-  output_type = c("matrix", "list")
+  output_type = c("matrix", "list"),
+  Time = "Time",
+  Event = "Censored",
+  censoringOne = TRUE,
+  Trt = "Trt",
+  Iter = "Iter"
 )
 }
 \arguments{
@@ -37,22 +42,32 @@ simulate_trials(
 
 \item{seed}{Seed number to use. Numerical, although if "Rand" is specified, a system-time-derived number will be used.}
 
-\item{detailed_output}{Boolean to require full details of timings of competing processes. If FALSE, the simplified data only includes the *'ed output columns - this approximately halves RAM requirements. Default=FALSE (simplified).}
+\item{detailed_output}{Boolean to require full details of timings of competing processes. Full details required for any future adjustments to assessment time. Simplified option approximately halves RAM requirements. Default=FALSE (simplified).}
 
 \item{output_type}{"matrix" or "list" specifying the type of output required. "matrix" requests a single matrix with a column "iter" to denote the simulation, while "list" creates a list with one entry per simulation. Default="matrix".}
+
+\item{Time}{String specifying the name of the output time column. Default="Time"}
+
+\item{Event}{String specifying the name of the output censoring/event column. Default="Censored" (and by default it is a censoring column unless censoringOne=FALSE)}
+
+\item{censoringOne}{Boolean specifying whether censoring is denoted in the censoring/event column by a one (TRUE) or zero (FALSE). Default=TRUE (censorings denoted by 1, events by 0)}
+
+\item{Trt}{String specifying the name of the output treatment column. Default="Trt"}
+
+\item{Iter}{String specifying the name of the output iterations column. Default="Iter"}
 }
 \value{
 Returns a table with one row per patient per simulation. Table contains the following columns:
 \itemize{
- \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis*}
- \item{"Censored"}{ Simulated censoring indicator: 1 denotes censoring (administrative or dropout), 0 denotes an event*}
- \item{"Trt"}{ Treatment group number - 1 is active, 2 is control*}
- \item{"Iter"}{ Simulation number*}
- \item{"ETime"}{ Simulated actual event (patient) time (may or may not be observed)}
- \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed)}
- \item{"Rec_Time"}{ Simulated (trial) time of recruitment}
- \item{"Assess"}{ Prespecified (trial) time of assessment}
- \item{"Max_F"}{ Prespecified maximum patient follow-up time}
+ \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis. Named by Time argument.}
+ \item{"Event"}{ Simulated event indicator denoting censorings/events as 1/0 if censoringOne=TRUE and 0/1 if censoringOne=FALSE. Named by Event argument.}
+ \item{"Trt"}{ Treatment group number - 1 is active, 2 is control. Named by Trt argument.}
+ \item{"Iter"}{ Simulation number. Named by Iter argument.}
+ \item{"ETime"}{ Simulated actual event (patient) time (may or may not be observed). Only produced when detailed_output=TRUE.}
+ \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed).Only produced when detailed_output=TRUE.}
+ \item{"Rec_Time"}{ Simulated (trial) time of recruitment. Only produced when detailed_output=TRUE.}
+ \item{"Assess"}{ Prespecified (trial) time of assessment. Only produced when detailed_output=TRUE.}
+ \item{"Max_F"}{ Prespecified maximum patient follow-up time. Only produced when detailed_output=TRUE.}
  \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed)}
 }
 }
@@ -60,7 +75,7 @@ Returns a table with one row per patient per simulation. Table contains the foll
 Function for simulating generalised two-arm time-to-event trial data for NPH trials with arbitrary event, censoring and recruitment distributions.\cr
 Event and censoring distributions are specified via Curve objects, with recruitment specified through an RCurve object.
 As it uses same architecture and similar syntax to nph_traj(), analysis results ought to be directly comparable.
-It is designed to complement nph_traj(), either as a stochastic alternative, or as a means to validate its outputs. 
+It is designed to complement nph_traj(), either as a stochastic alternative, or as a means to validate its outputs.
 It can also be used to build more complex simulations by combining the outputs of multiple runs; e.g. multi-arm trials.\cr
 Data sets created by this function are formatted so they may be automatically recognised and analysed by analyse_sim().\cr
 }

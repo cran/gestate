@@ -1,6 +1,6 @@
 Package: gestate
 Title: Generalised Survival Trial Assessment Tool Environment
-Version: 1.5.0
+Version: 1.6.0
 Authors@R: c(
  person("James", "Bell", email = "james.bell.ext@boehringer-ingelheim.com", role = c("aut", "cre")),
  person("Jasmin", "Ruehl", email = "",role = "ctb"))
@@ -13,9 +13,9 @@ RoxygenNote: 7.1.1
 Suggests: testthat, knitr, rmarkdown
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2021-11-24 10:16:30 UTC; James
+Packaged: 2023-04-26 10:06:53 UTC; James
 Author: James Bell [aut, cre],
   Jasmin Ruehl [ctb]
 Maintainer: James Bell <james.bell.ext@boehringer-ingelheim.com>
 Repository: CRAN
-Date/Publication: 2021-11-24 11:20:03 UTC
+Date/Publication: 2023-04-26 11:02:30 UTC

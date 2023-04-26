@@ -29,7 +29,7 @@ events2power <- function(events,HR,ratio=1,alpha1=0.025,HRbound=1){
 #' @keywords internal
 power2events <- function(power,HR,ratio=1,alpha1=0.025,HRbound=1){
   events <- (((ratio+1)^2/ratio)*(qnorm(1-alpha1)+qnorm(power))^2)/(log(HR/HRbound)^2)
-  events[HR > 1] <- Inf
+  events[HR > HRbound] <- Inf
   return(events)
 }
 

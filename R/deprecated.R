@@ -222,6 +222,47 @@ event_prediction_KM <- function(KMcurve, Survival="Survival", Time="Time", weigh
 
 
 
+###########
+# Older functions for simulation analysis that require censoring column; now replaced by functions that allow either
+# New functions have same name with added _event at end.
+
+################################################################################
+# LR_cov_analysis ; Helper function for stratified log-rank/covariate-adjusted Cox analysis in analyse_sim
+# Requires the 'survival' default R package to be pre-loaded
+# Note: this assumes the input is in terms of censoring, i.e. censorings=1, events=0
+# Takes as input:
+#  i:   	integer of simulation to be analysed
+#  data:	data set produced by the simulate_trials function
+#  cov:     covariate column name
+#  Time:    time column name
+#  Censored:   censoring column name
+#  Trt:     treatment column name
+################################################################################
+LR_cov_analysis <- function(i,data,cov,Time,Censored,Trt){
+  iterdata <- data[[i]]
+  covs <- length(cov)
+  analysis <- coxph(Surv(iterdata[,Time],1-iterdata[,Censored])~ iterdata[,Trt] + as.factor(iterdata[,cov]),ties="breslow")
+  analysisLR <- survdiff(Surv(iterdata[,Time],1-iterdata[,Censored])~ iterdata[,Trt] + strata(iterdata[,cov]))
+  output <- c(NA,coef(summary(analysis))[1,1],coef(summary(analysis))[1,3]^2,c(NA,NA),sqrt(analysisLR$chisq)*sign(sum(analysisLR$exp[1,])-sum(analysisLR$obs[1,])),NA,length(iterdata[(iterdata[,Trt]==2 & iterdata[,Censored]==0),1]),length(iterdata[(iterdata[,Trt]==1 & iterdata[,Censored]==0),1]))
+}
+
+################################################################################
+# LR_analysis ; Helper function for log-rank/Cox analysis in analyse_sim
+# Requires the 'survival' default R package to be pre-loaded
+# Note: this assumes the input is in terms of censoring, i.e. censorings=1, events=0
+# Takes as input:
+#  i:   	integer of simulation to be analysed
+#  data:	data set produced by the simulate_trials function
+#  Time:    time column name
+#  Censored: censoring column name
+#  Trt:     treatment column name
+################################################################################
+LR_analysis <- function(i,data,Time,Censored,Trt){
+  iterdata <- data[[i]]
+  fit <- coxph.fit(x=matrix(iterdata[,Trt],ncol=1), y=Surv(iterdata[,Time],1-iterdata[,Censored]), strata=NULL, offset=NULL, init=NULL, control=coxph.control(), method = "breslow",rownames=1:nrow(iterdata))
+  output <- c(NA,fit$coefficients,fit$var,c(NA,NA),sqrt(fit$score)*sign(fit$coefficients[1]),NA,length(iterdata[(iterdata[,Trt]==2 & iterdata[,Censored]==0),1]),length(iterdata[(iterdata[,Trt]==1 & iterdata[,Censored]==0),1]))
+}
+
 
 
 
