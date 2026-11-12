@@ -22,12 +22,12 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Ialphafunction", "Ibeta
 #' @param Weight_power Power to raise the weights to. Useful in large trials to give added weight to later points where numbers may still be high. Default=1 (Use weights as specified)
 #' @param startbeta Starting value for the Weibull beta (shape) parameter to be used in the non-linear regression. Default=1 (exponential).
 #' @param startsigma Starting value for the Lognormal sigma (sd) parameter to be used in the non-linear regression. Default=1.
-#' @return Returns a 3-item list providing information needed to define a Curve object:
+#' @return Returns a 4-item list providing information needed to define a Curve object:
 #' \itemize{
-#'  \item{"Item 1"}{The type of Curve object fitted.}
-#'  \item{"Item 2"}{A list of fitted parameters for the curve type.}
-#'  \item{"Item 3"}{A placeholder vector of NAs where the covariance-matrix parameters should be.}
-#'  \item{"Item 4"}{A data frame containing the goodness of fit metrics for each curve type.}
+#'  \item{The type of Curve object fitted.}
+#'  \item{A list of fitted parameters for the curve type.}
+#'  \item{A placeholder vector of NAs where the covariance-matrix parameters should be.}
+#'  \item{A data frame containing the goodness of fit metrics for each curve type.}
 #' }
 #' @author James Bell
 #' @examples recruit <- PieceR(matrix(c(rep(1,12),10,15,25,30,45,60,55,50,65,60,55,30),ncol=2),1)
@@ -235,12 +235,12 @@ fit_KM <- function(KMcurve,Survival="Survival",Time="Time",type=c("automatic","W
 #' @param type Type of event curve to fit. Default is "Automatic", fitting both Weibull and Log-normal curves.
 #'     Alternatively accepts "Weibull" or "Lognormal" to force the type.
 #' @param init Vector of starting values for parameter values; useful if survreg experiences convergence issues. Default=NULL (no values specified)
-#' @return Returns a 3-item list providing information needed to define a Curve object:
+#' @return Returns a 4-item list providing information needed to define a Curve object:
 #' \itemize{
-#'  \item{"Item 1"}{The type of Curve object fitted.}
-#'  \item{"Item 2"}{A list of fitted parameters for the curve type.}
-#'  \item{"Item 3"}{A vector containing the covariance-matrix parameters for the curve type.}
-#'  \item{"Item 4"}{A data frame containing the goodness of fit metrics for each curve type.}
+#'  \item{The type of Curve object fitted.}
+#'  \item{A list of fitted parameters for the curve type.}
+#'  \item{A vector containing the covariance-matrix parameters for the curve type.}
+#'  \item{A data frame containing the goodness of fit metrics for each curve type.}
 #' }
 #' @author James Bell
 #' @examples recruit <- PieceR(matrix(c(rep(1,12),10,15,25,30,45,60,55,50,65,60,55,30),ncol=2),1)
@@ -382,18 +382,18 @@ fit_tte_data <- function(data,Time="Time",Event="Event",censoringOne=FALSE,type=
 #' @return Returns a list object with the prediction ecurve (after adjustments for unit, discountHR), dcurve, rcurve, required PI, original fitted ecurve parameters (before adjustments)
 #'     and a summary table with one row per month up to max_time containing the following columns:
 #' \itemize{
-#'  \item{"Assessment_Time"}{Time of assessment.}
-#'  \item{"Patients"}{Number of patients recruited by the assessment time.}
-#'  \item{"Predicted_Events"}{Number of events unconditionally predicted at the assessment time.}
-#'  \item{"SE_Fitting"}{SE of the estimate of the fitted mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers.}
-#'  \item{"SE_Prediction"}{SE of event prediction.}
-#'  \item{"Prediction_Lower"}{Lower bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
-#'  \item{"Prediction_Upper"}{Upper bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
-#'  \item{"Conditioned_Events"}{Number of events conditionally predicted at the assessment time (Column present only if conditioning specified).}
-#'  \item{"Cond_SE_Fitting"}{SE of the estimate of the fitted conditional mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers (Column present only if conditioning specified).}
-#'  \item{"Cond_SE_Prediction"}{SE of the conditional event prediction (Column present only if conditioning specified).}
-#'  \item{"Cond_Prediction_Lower"}{Lower bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
-#'  \item{"Cond_Prediction_Upper"}{Upper bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+#'  \item{"Assessment_Time": Time of assessment.}
+#'  \item{"Patients": Number of patients recruited by the assessment time.}
+#'  \item{"Predicted_Events": Number of events unconditionally predicted at the assessment time.}
+#'  \item{"SE_Fitting": SE of the estimate of the fitted mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers.}
+#'  \item{"SE_Prediction": SE of event prediction.}
+#'  \item{"Prediction_Lower": Lower bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+#'  \item{"Prediction_Upper": Upper bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+#'  \item{"Conditioned_Events": Number of events conditionally predicted at the assessment time (Column present only if conditioning specified).}
+#'  \item{"Cond_SE_Fitting": SE of the estimate of the fitted conditional mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers (Column present only if conditioning specified).}
+#'  \item{"Cond_SE_Prediction": SE of the conditional event prediction (Column present only if conditioning specified).}
+#'  \item{"Cond_Prediction_Lower": Lower bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+#'  \item{"Cond_Prediction_Upper": Upper bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
 #' }
 #' @author James Bell
 #' @references Bell J, "Are we nearly there yet?" Quantifying uncertainty in event prediction, 2019, presentation at PSI Conference.
@@ -864,12 +864,12 @@ create_tte_prior <- function(curve,duration,events,Time="Time",Event="Event",cen
 #'     weighting of prior and observed data.
 #'     The prior weight should typically not be greater than 1. Default=1 (prior patients weighted equivalently to observed data)
 #' @param init Vector of starting values for parameter values; useful if survreg experiences convergence issues. Default=NULL (no values specified)
-#' @return Returns a 3-item list providing information needed to define a Curve object:
+#' @return Returns a 4-item list providing information needed to define a Curve object:
 #' \itemize{
-#'  \item{"Item 1"}{The type of Curve object fitted.}
-#'  \item{"Item 2"}{A list of fitted parameters for the curve type.}
-#'  \item{"Item 3"}{A vector containing the covariance-matrix parameters for the curve type.}
-#'  \item{"Item 4"}{A data frame containing the goodness of fit metrics for each curve type.}
+#'  \item{The type of Curve object fitted.}
+#'  \item{A list of fitted parameters for the curve type.}
+#'  \item{A vector containing the covariance-matrix parameters for the curve type.}
+#'  \item{A data frame containing the goodness of fit metrics for each curve type.}
 #' }
 #' @author James Bell
 #' @references Bell J, unpublished work.
@@ -948,7 +948,9 @@ fit_tte_data_prior <- function(data,Time="Time",Event="Event",censoringOne=FALSE
     start <- if(is.null(start)){c(max(data_events),1)}
 
     #The run code to find the estimates and covariance
-    pars <- optim(start,fit_function,times=data_events,censortimes=data_censorings,priortimes=prior_events,priorcensortimes=prior_censorings,weight=priorweight,method="L-BFGS-B",lower=c(0.0001,0.0001))$par
+    pars <- optim(start,fit_function,times=data_events,censortimes=data_censorings,
+                  priortimes=prior_events,priorcensortimes=prior_censorings,
+                  weight=priorweight,method="L-BFGS-B",lower=c(0.0001,0.0001))$par
     vcov <- covm(pars[1],pars[2],data_events,data_censorings,prior_events,prior_censorings,weight=priorweight)
 
     return(list(icoef=pars,var=vcov))
@@ -960,7 +962,16 @@ fit_tte_data_prior <- function(data,Time="Time",Event="Event",censoringOne=FALSE
   if(censoringOne){E <- 1-E}
 
   if(type=="Weibull"){
-    fitW <- fit_prior_weibull(data,priordata,Time=Time,Event=Event,censoringOne=censoringOne,priorweight=priorweight,init=init)
+    fitW <- fit_prior_weibull(data=data,
+                              priordata=priordata,
+                              Time=Time,
+                              Event=Event,
+                              censoringOne=censoringOne,
+                              priorTime=priorTime,
+                              priorEvent=priorEvent,
+                              priorcensoringOne=priorcensoringOne,
+                              priorweight=priorweight,
+                              init=init)
     WLL <- NA
   }
 
@@ -1030,18 +1041,18 @@ fit_tte_data_prior <- function(data,Time="Time",Event="Event",censoringOne=FALSE
 #' @return Returns a list object with the prediction ecurve (after adjustments for unit, discountHR), dcurve, rcurve, required PI, original fitted ecurve parameters (before adjustments)
 #'     and a summary table with one row per month up to max_time containing the following columns:
 #' \itemize{
-#'  \item{"Assessment_Time"}{Time of assessment.}
-#'  \item{"Patients"}{Number of patients recruited by the assessment time.}
-#'  \item{"Predicted_Events"}{Number of events unconditionally predicted at the assessment time.}
-#'  \item{"SE_Fitting"}{SE of the estimate of the fitted mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers.}
-#'  \item{"SE_Prediction"}{SE of event prediction.}
-#'  \item{"Prediction_Lower"}{Lower bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
-#'  \item{"Prediction_Upper"}{Upper bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
-#'  \item{"Conditioned_Events"}{Number of events conditionally predicted at the assessment time (Column present only if conditioning specified).}
-#'  \item{"Cond_SE_Fitting"}{SE of the estimate of the fitted conditional mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers (Column present only if conditioning specified).}
-#'  \item{"Cond_SE_Prediction"}{SE of the conditional event prediction (Column present only if conditioning specified).}
-#'  \item{"Cond_Prediction_Lower"}{Lower bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
-#'  \item{"Cond_Prediction_Upper"}{Upper bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+#'  \item{"Assessment_Time": Time of assessment.}
+#'  \item{"Patients": Number of patients recruited by the assessment time.}
+#'  \item{"Predicted_Events": Number of events unconditionally predicted at the assessment time.}
+#'  \item{"SE_Fitting": SE of the estimate of the fitted mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers.}
+#'  \item{"SE_Prediction": SE of event prediction.}
+#'  \item{"Prediction_Lower": Lower bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+#'  \item{"Prediction_Upper": Upper bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+#'  \item{"Conditioned_Events": Number of events conditionally predicted at the assessment time (Column present only if conditioning specified).}
+#'  \item{"Cond_SE_Fitting": SE of the estimate of the fitted conditional mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers (Column present only if conditioning specified).}
+#'  \item{"Cond_SE_Prediction": SE of the conditional event prediction (Column present only if conditioning specified).}
+#'  \item{"Cond_Prediction_Lower": Lower bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+#'  \item{"Cond_Prediction_Upper": Upper bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
 #' }
 #' @author James Bell
 #' @references Bell J, unpublished work.
@@ -1201,7 +1212,17 @@ event_prediction_prior <- function(data, Time="Time", Event="Event", censoringOn
 #####
 
   #Fit chosen distribution(s) to patient-level.
-  Fitted <- fitted <- fit_tte_data_prior(data=data,Time=Time,Event=Event,censoringOne=censoringOne,type=type,priordata=priordata,priorTime=priorTime,priorEvent=priorEvent,priorcensoringOne=priorcensoringOne,priorweight=priorweight,init=init)
+  Fitted <- fitted <- fit_tte_data_prior(data=data,
+                                         Time=Time,
+                                         Event=Event,
+                                         censoringOne=censoringOne,
+                                         type=type,
+                                         priordata=priordata,
+                                         priorTime=priorTime,
+                                         priorEvent=priorEvent,
+                                         priorcensoringOne=priorcensoringOne,
+                                         priorweight=priorweight,
+                                         init=init)
 
   if(units=="Days"){
     conversion_factor <- 365.25/12

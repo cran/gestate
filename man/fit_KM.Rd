@@ -37,12 +37,12 @@ Alternatively accepts "Weibull", "Lognormal" or "Exponential" to force the type.
 \item{startsigma}{Starting value for the Lognormal sigma (sd) parameter to be used in the non-linear regression. Default=1.}
 }
 \value{
-Returns a 3-item list providing information needed to define a Curve object:
+Returns a 4-item list providing information needed to define a Curve object:
 \itemize{
- \item{"Item 1"}{The type of Curve object fitted.}
- \item{"Item 2"}{A list of fitted parameters for the curve type.}
- \item{"Item 3"}{A placeholder vector of NAs where the covariance-matrix parameters should be.}
- \item{"Item 4"}{A data frame containing the goodness of fit metrics for each curve type.}
+ \item{The type of Curve object fitted.}
+ \item{A list of fitted parameters for the curve type.}
+ \item{A placeholder vector of NAs where the covariance-matrix parameters should be.}
+ \item{A data frame containing the goodness of fit metrics for each curve type.}
 }
 }
 \description{

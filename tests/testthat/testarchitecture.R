@@ -212,9 +212,9 @@ test_that("analyse_sim is working properly", {
 })
 
 test_that("analyse_sim is working properly with Events rather than Censorings", {
-  expect_identical(ddd,ddda)
-  expect_identical(jjj,jjja)
-  expect_identical(kkk,kkka)
+  expect_equal(ddd,ddda)
+  expect_equal(jjj,jjja)
+  expect_equal(kkk,kkka)
 })
 
 test_that("summarise_analysis is working properly", {
@@ -279,7 +279,7 @@ test_that("Curve fit outputs are correct", {
   expect_equal(as.numeric(fit2a$VCov),tolerance=0.000001,c(913.66525215,0.01456038,-3.05446988))
   expect_equal(as.numeric(fit2c$VCov),tolerance=0.000001,c(0.09259047,0.05473513,0.05859155))
   expect_equal(as.numeric(fit2d$VCov),tolerance=0.0000001,0.000001431268)
-  expect_identical(fit2b$VCov,fit2a$VCov)
+  expect_equal(fit2b$VCov,fit2a$VCov)
 })
 
 context("Event prediction testing")
@@ -295,10 +295,10 @@ test_that("event_prediction is working properly", {
   expect_equal(as.numeric(predict2a$Summary[50,]),tolerance=0.001,c(50,300,79.906,9.6301,12.2904,57,105,86.96,5.67,7.68,73,103))
   expect_equal(as.numeric(predict2b$Summary[50,]),tolerance=0.001,c(50,300,96.288,12.1419,14.5712,69,126,105.887,7.1687,9.0252,90,125))
   expect_equal(as.numeric(predict2c$Summary[50,]),tolerance=0.001,c(50,300,98.983,10.5552,13.3178,74,126,108.314,4.5865,7.2716,95,123))
-  expect_identical(predict2a$Summary,predict3a$Summary)
-  expect_identical(predict2b$Summary,predict3b$Summary)
-  expect_identical(predict2c$Summary,predict3c$Summary)
-  expect_identical(predict2c,predict2ca)
+  expect_equal(predict2a$Summary,predict3a$Summary)
+  expect_equal(predict2b$Summary,predict3b$Summary)
+  expect_equal(predict2c$Summary,predict3c$Summary)
+  expect_equal(predict2c,predict2ca)
 })
 
 

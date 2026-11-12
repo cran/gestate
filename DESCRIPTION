@@ -1,6 +1,6 @@
 Package: gestate
 Title: Generalised Survival Trial Assessment Tool Environment
-Version: 1.6.0
+Version: 1.6.2
 Authors@R: c(
  person("James", "Bell", email = "james.bell.ext@boehringer-ingelheim.com", role = c("aut", "cre")),
  person("Jasmin", "Ruehl", email = "",role = "ctb"))
@@ -9,13 +9,13 @@ Depends: R (>= 4.0.0)
 Imports: foreach, doParallel, shiny, shinythemes, survival, methods
 License: GPL-3
 Encoding: UTF-8
-RoxygenNote: 7.1.1
 Suggests: testthat, knitr, rmarkdown
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2023-04-26 10:06:53 UTC; James
+Config/roxygen2/version: 8.1.1
+Packaged: 2026-11-11 11:07:54 UTC; james
 Author: James Bell [aut, cre],
   Jasmin Ruehl [ctb]
 Maintainer: James Bell <james.bell.ext@boehringer-ingelheim.com>
 Repository: CRAN
-Date/Publication: 2023-04-26 11:02:30 UTC
+Date/Publication: 2026-11-12 14:00:02 UTC

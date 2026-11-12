@@ -14,13 +14,13 @@ survfit_fast(time, events)
 \value{
 Returns a list format lifetable with the following entries:
 \itemize{
- \item{"n"}{Number of patients}
- \item{"time"}{Vector of times}
- \item{"n.risk"}{Vector of numbers of patients at risk at each time}
- \item{"n.event"}{Vector of numbers of patients with an event at each time}
- \item{"n.censor"}{Vector of numbers of patients censored at each time}
- \item{"surv"}{Vector of estimates of Survival function at each time}
- \item{"se"}{Vector of standard errors of estimates of Survival function at each time}
+ \item{"n": Number of patients}
+ \item{"time": Vector of times}
+ \item{"n.risk": Vector of numbers of patients at risk at each time}
+ \item{"n.event": Vector of numbers of patients with an event at each time}
+ \item{"n.censor": Vector of numbers of patients censored at each time}
+ \item{"surv": Vector of estimates of Survival function at each time}
+ \item{"se": Vector of standard errors of estimates of Survival function at each time}
 }
 }
 \description{

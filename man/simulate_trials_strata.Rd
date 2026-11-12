@@ -46,7 +46,7 @@ simulate_trials_strata(
 
 \item{iterations}{Number of simulations to perform. Depending on trial size, 10,000-20,000 is typically OK to analyse on 8GB RAM.}
 
-\item{seed}{Seed number to use. Numerical, although if "Rand" is specified, a system-time-derived number will be used.}
+\item{seed}{Seed number to use. Positive integer, or if 0 is specified, a system-time-derived number will be used.}
 
 \item{detailed_output}{Boolean to require full details of timings of competing processes. Full details required for any future adjustments to assessment time. Simplified option approximately halves RAM requirements. Default=FALSE (simplified).}
 
@@ -65,17 +65,17 @@ simulate_trials_strata(
 \value{
 Returns a table with one row per patient per simulation. Table contains the following columns:
 \itemize{
- \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis. Named by Time argument.}
- \item{"Event"}{ Simulated event indicator denoting censorings/events as 1/0 if censoringOne=TRUE and 0/1 if censoringOne=FALSE. Named by Event argument.}
- \item{"Trt"}{ Treatment group number - 1 is active, 2 is control. Named by Trt argument.}
- \item{"Iter"}{ Simulation number. Named by Iter argument.}
- \item{"Stratum"}{ Stratum number. Column name will be the value of the stratum_name argument.)}
- \item{"ETime"}{ Simulated actual event (patient) time (may or may not be observed). Only produced when detailed_output=TRUE.}
- \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed).Only produced when detailed_output=TRUE.}
- \item{"Rec_Time"}{ Simulated (trial) time of recruitment. Only produced when detailed_output=TRUE.}
- \item{"Assess"}{ Prespecified (trial) time of assessment. Only produced when detailed_output=TRUE.}
- \item{"Max_F"}{ Prespecified maximum patient follow-up time. Only produced when detailed_output=TRUE.}
- \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed. Only produced when detailed_output=TRUE.)}
+ \item{"Time": Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis. Named by Time argument.}
+ \item{"Event": Simulated event indicator denoting censorings/events as 1/0 if censoringOne=TRUE and 0/1 if censoringOne=FALSE. Named by Event argument.}
+ \item{"Trt": Treatment group number - 1 is control, 2 is active. Named by Trt argument.}
+ \item{"Iter": Simulation number. Named by Iter argument.}
+ \item{"Stratum": Stratum number. Column name will be the value of the stratum_name argument.)}
+ \item{"ETime": Simulated actual event (patient) time (may or may not be observed). Only produced when detailed_output=TRUE.}
+ \item{"CTime": Simulated actual censoring/dropout (patient) time (may or may not be observed).Only produced when detailed_output=TRUE.}
+ \item{"Rec_Time": Simulated (trial) time of recruitment. Only produced when detailed_output=TRUE.}
+ \item{"Assess": Prespecified (trial) time of assessment. Only produced when detailed_output=TRUE.}
+ \item{"Max_F": Prespecified maximum patient follow-up time. Only produced when detailed_output=TRUE.}
+ \item{"RCTime": Simulated actual administrative censoring (patient) time (may or may not be observed. Only produced when detailed_output=TRUE.)}
 }
 }
 \description{

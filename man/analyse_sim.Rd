@@ -44,33 +44,33 @@ analyse_sim(
 \value{
 Returns a table with one row per simulation. Table contains the following columns:
 \itemize{
- \item{"HR"}{ Cox Hazard Ratio (LR/Cox analysis only)}
- \item{"LogHR"}{ Cox Log Hazard Ratio (LR/Cox analysis only)}
- \item{"LogHR_SE"}{ Cox Standard Error of log Hazard Ratio (LR/Cox analysis only)}
- \item{"HR_Z"}{ Cox Z-Score (LR/Cox analysis only)}
- \item{"HR_P"}{ 1-sided Cox p-value (LR/Cox analysis only)}
- \item{"LR_Z"}{ Log-Rank Test Z-Score (LR/Cox analysis only)}
- \item{"LR_P"}{ 1-sided Log-Rank Test p-value (LR/Cox analysis only)}
- \item{"Events_Active"}{ Events in Active arm (LR/Cox analysis only)}
- \item{"Events_Control"}{ Events in Control arm (LR/Cox analysis only)}
- \item{"RMST_Time"}{ RMST restriction time (RMST analysis only)}
- \item{"RMST_Active"}{ RMST for Active arm (RMST analysis only)}
- \item{"RMST_Active_SE"}{ RMST Standard Error for Active arm (RMST analysis only)}
- \item{"RMST_Control"}{ RMST for Control arm (RMST analysis only)}
- \item{"RMST_Control_SE"}{ RMST Standard Error for Control arm (RMST analysis only)}
- \item{"RMST_Delta"}{ RMST difference between arms active-control (RMST analysis only)}
- \item{"RMST_Delta_SE"}{ RMST difference between arms Standard Error (RMST analysis only)}
- \item{"RMST_Z"}{ Z-score for RMST (RMST analysis only)}
- \item{"RMST_P"}{ 1-sided RMST p-value (RMST analysis only)}
- \item{"LM_Time"}{ Landmark time, i.e. time of survival function comparison  (Landmark analysis only)}
- \item{"LM_Active"}{ Survival function for active arm at landmark time (Landmark analysis only)}
- \item{"LM_Active_SE"}{ Greenwood standard error for active arm at landmark time (Landmark analysis only)}
- \item{"LM_Control"}{ Survival function for control arm at landmark time (Landmark analysis only)}
- \item{"LM_Control_SE"}{ Greenwood standard error for control arm at landmark time (Landmark analysis only)}
- \item{"LM_Delta"}{ Survival function difference between arms active-control at landmark time (Landmark analysis only)}
- \item{"LM_Delta_SE"}{ Greenwood standard error for difference between arms at landmark time (Landmark analysis only)}
- \item{"LM_Z"}{ Z-score for landmark analysis (Landmark analysis only)}
- \item{"LM_P"}{ 1-sided landmark analysis p-value (Landmark analysis only)}
+ \item{"HR": Cox Hazard Ratio (LR/Cox analysis only)}
+ \item{"LogHR": Cox Log Hazard Ratio (LR/Cox analysis only)}
+ \item{"LogHR_SE": Cox Standard Error of log Hazard Ratio (LR/Cox analysis only)}
+ \item{"HR_Z": Cox Z-Score (LR/Cox analysis only)}
+ \item{"HR_P": 1-sided Cox p-value (LR/Cox analysis only)}
+ \item{"LR_Z": Log-Rank Test Z-Score (LR/Cox analysis only)}
+ \item{"LR_P": 1-sided Log-Rank Test p-value (LR/Cox analysis only)}
+ \item{"Events_Active": Events in Active arm (LR/Cox analysis only)}
+ \item{"Events_Control": Events in Control arm (LR/Cox analysis only)}
+ \item{"RMST_Time": RMST restriction time (RMST analysis only)}
+ \item{"RMST_Active": RMST for Active arm (RMST analysis only)}
+ \item{"RMST_Active_SE": RMST Standard Error for Active arm (RMST analysis only)}
+ \item{"RMST_Control": RMST for Control arm (RMST analysis only)}
+ \item{"RMST_Control_SE": RMST Standard Error for Control arm (RMST analysis only)}
+ \item{"RMST_Delta": RMST difference between arms active-control (RMST analysis only)}
+ \item{"RMST_Delta_SE": RMST difference between arms Standard Error (RMST analysis only)}
+ \item{"RMST_Z": Z-score for RMST (RMST analysis only)}
+ \item{"RMST_P": 1-sided RMST p-value (RMST analysis only)}
+ \item{"LM_Time": Landmark time, i.e. time of survival function comparison  (Landmark analysis only)}
+ \item{"LM_Active": Survival function for active arm at landmark time (Landmark analysis only)}
+ \item{"LM_Active_SE": Greenwood standard error for active arm at landmark time (Landmark analysis only)}
+ \item{"LM_Control": Survival function for control arm at landmark time (Landmark analysis only)}
+ \item{"LM_Control_SE": Greenwood standard error for control arm at landmark time (Landmark analysis only)}
+ \item{"LM_Delta": Survival function difference between arms active-control at landmark time (Landmark analysis only)}
+ \item{"LM_Delta_SE": Greenwood standard error for difference between arms at landmark time (Landmark analysis only)}
+ \item{"LM_Z": Z-score for landmark analysis (Landmark analysis only)}
+ \item{"LM_P": 1-sided landmark analysis p-value (Landmark analysis only)}
 }
 }
 \description{

@@ -63,7 +63,7 @@ output2 <- nph_traj(active_ecurve=activeCurveNPH,control_ecurve=controlCurveNPH,
 output2
 
 
-## ---- fig.show='hold',fig.height = 5, fig.width = 7, fig.align = "center"-----
+## ----fig.show='hold',fig.height = 5, fig.width = 7, fig.align = "center"------
 # Plot output from nph_traj
 plot_npht(output2)
 

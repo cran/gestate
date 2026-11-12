@@ -35,7 +35,8 @@ This is a function to create a patient-level prior data set from a specified Cur
 It can be used to create a prior data set where only summary parameters are known.
 It requires a 'curve' object containing the desired distribution, the 'time' over which events occur and the number of 'events'.
 Designed to be used in conjunction with event prediction methods.
-Note that the output can be 'too perfect', so that when the output is used for curve-fitting it may result in over-precision.
+Note that the output has no noise, so that when the output is used for curve-fitting it may result in over-precision.
+Note also that when a low number of events is specified, the data may drift slightly from the desired parameters.
 To minimise this effect, it may better to derive the prior data set using a different distribution to the one later used for fitting or specifying down-weighting.
 }
 \examples{

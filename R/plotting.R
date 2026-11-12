@@ -2,7 +2,7 @@
 #'
 #' This function plots the output from nph_traj().\cr
 #' By default, it produces 6 plots:
-#' \itemize{
+#' \describe{
 #'  \item{"KM plot"}{ Kaplan Meier plot for events. This is in patient time.}
 #'  \item{"Censoring plot"}{ Plot of CDFs for censoring functions. This is in patient time.}
 #'  \item{"Recruitment plot"}{ Number of patients expected to have been recruited over time. This is in trial time.}

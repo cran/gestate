@@ -34,10 +34,10 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("Dfunction","Cfunction")
 #'     Default=1 (No discounting)
 #' @return Returns a list object with the fitted ecurve, the dcurve, the rcurve, the fitting details, and a summary table with one row per month up to max_time containing the following columns:
 #' \itemize{
-#'  \item{"Time"}{Time of assessment.}
-#'  \item{"Patients"}{Number of patients recruited by the assessment time.}
-#'  \item{"Predicted_Events"}{Number of events unconditionally predicted at the assessment time.}
-#'  \item{"Conditioned_Events"}{Number of events unconditionally predicted at the assessment time (Column present only if conditioning specified).}
+#'  \item{"Time": Time of assessment.}
+#'  \item{"Patients": Number of patients recruited by the assessment time.}
+#'  \item{"Predicted_Events": Number of events unconditionally predicted at the assessment time.}
+#'  \item{"Conditioned_Events": Number of events unconditionally predicted at the assessment time (Column present only if conditioning specified).}
 #' }
 #' @author James Bell
 #' @examples recruit <- PieceR(matrix(c(rep(1,12),10,15,25,30,45,60,55,50,65,60,55,30),ncol=2),1)

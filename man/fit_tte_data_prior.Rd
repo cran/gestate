@@ -46,12 +46,12 @@ The prior weight should typically not be greater than 1. Default=1 (prior patien
 \item{init}{Vector of starting values for parameter values; useful if survreg experiences convergence issues. Default=NULL (no values specified)}
 }
 \value{
-Returns a 3-item list providing information needed to define a Curve object:
+Returns a 4-item list providing information needed to define a Curve object:
 \itemize{
- \item{"Item 1"}{The type of Curve object fitted.}
- \item{"Item 2"}{A list of fitted parameters for the curve type.}
- \item{"Item 3"}{A vector containing the covariance-matrix parameters for the curve type.}
- \item{"Item 4"}{A data frame containing the goodness of fit metrics for each curve type.}
+ \item{The type of Curve object fitted.}
+ \item{A list of fitted parameters for the curve type.}
+ \item{A vector containing the covariance-matrix parameters for the curve type.}
+ \item{A data frame containing the goodness of fit metrics for each curve type.}
 }
 }
 \description{

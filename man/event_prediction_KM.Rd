@@ -71,10 +71,10 @@ Default=1 (No discounting)}
 \value{
 Returns a list object with the fitted ecurve, the dcurve, the rcurve, the fitting details, and a summary table with one row per month up to max_time containing the following columns:
 \itemize{
- \item{"Time"}{Time of assessment.}
- \item{"Patients"}{Number of patients recruited by the assessment time.}
- \item{"Predicted_Events"}{Number of events unconditionally predicted at the assessment time.}
- \item{"Conditioned_Events"}{Number of events unconditionally predicted at the assessment time (Column present only if conditioning specified).}
+ \item{"Time": Time of assessment.}
+ \item{"Patients": Number of patients recruited by the assessment time.}
+ \item{"Predicted_Events": Number of events unconditionally predicted at the assessment time.}
+ \item{"Conditioned_Events": Number of events unconditionally predicted at the assessment time (Column present only if conditioning specified).}
 }
 }
 \description{

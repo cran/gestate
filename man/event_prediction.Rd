@@ -71,18 +71,18 @@ Default=1 (No discounting for adjudication)}
 Returns a list object with the prediction ecurve (after adjustments for unit, discountHR), dcurve, rcurve, required PI, original fitted ecurve parameters (before adjustments)
     and a summary table with one row per month up to max_time containing the following columns:
 \itemize{
- \item{"Assessment_Time"}{Time of assessment.}
- \item{"Patients"}{Number of patients recruited by the assessment time.}
- \item{"Predicted_Events"}{Number of events unconditionally predicted at the assessment time.}
- \item{"SE_Fitting"}{SE of the estimate of the fitted mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers.}
- \item{"SE_Prediction"}{SE of event prediction.}
- \item{"Prediction_Lower"}{Lower bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
- \item{"Prediction_Upper"}{Upper bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
- \item{"Conditioned_Events"}{Number of events conditionally predicted at the assessment time (Column present only if conditioning specified).}
- \item{"Cond_SE_Fitting"}{SE of the estimate of the fitted conditional mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers (Column present only if conditioning specified).}
- \item{"Cond_SE_Prediction"}{SE of the conditional event prediction (Column present only if conditioning specified).}
- \item{"Cond_Prediction_Lower"}{Lower bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
- \item{"Cond_Prediction_Upper"}{Upper bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+ \item{"Assessment_Time": Time of assessment.}
+ \item{"Patients": Number of patients recruited by the assessment time.}
+ \item{"Predicted_Events": Number of events unconditionally predicted at the assessment time.}
+ \item{"SE_Fitting": SE of the estimate of the fitted mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers.}
+ \item{"SE_Prediction": SE of event prediction.}
+ \item{"Prediction_Lower": Lower bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+ \item{"Prediction_Upper": Upper bound of X percent interval of unconditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+ \item{"Conditioned_Events": Number of events conditionally predicted at the assessment time (Column present only if conditioning specified).}
+ \item{"Cond_SE_Fitting": SE of the estimate of the fitted conditional mean. Note that this corresponds to the accuracy of the estimate of the underlying parameter, not future observed event numbers (Column present only if conditioning specified).}
+ \item{"Cond_SE_Prediction": SE of the conditional event prediction (Column present only if conditioning specified).}
+ \item{"Cond_Prediction_Lower": Lower bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
+ \item{"Cond_Prediction_Upper": Upper bound of X percent interval of conditional event prediction, where X is the 'PI' argument. This PI is based on the quantiles of the beta-binomial distribution and so is discrete and asymmetric.}
 }
 }
 \description{

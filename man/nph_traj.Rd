@@ -47,59 +47,59 @@ nph_traj(
 \value{
 Returns a table with one row per assessment time. Table contains both all input parameters as well as the following expected quantities:
 \itemize{
- \item{"Time"}{ Time at which the assessment is made}
- \item{"Patients"}{ Number of patients expected to be recruited to date}
- \item{"Events_Active"}{ Expected number of observed events in active arm}
- \item{"Events_Control"}{ Expected number of observed events in control arm}
- \item{"Events_Total"}{ Expected number of events across both arms}
- \item{"HR"}{ Expected Hazard Ratio (using the Pike method)}
- \item{"LogHR"}{ Log of the expected Hazard Ratio}
- \item{"LogHR_SE"}{ SE of the log of the expected Hazard Ratio}
- \item{"Schoenfeld_Power"}{ Estimated power based on Schoenfeld formula}
- \item{"Frontier_Power"}{ Estimated power based on Frontier method, using estimated event ratio at 0.5 power}
+ \item{"Time": Time at which the assessment is made}
+ \item{"Patients": Number of patients expected to be recruited to date}
+ \item{"Events_Active": Expected number of observed events in active arm}
+ \item{"Events_Control": Expected number of observed events in control arm}
+ \item{"Events_Total": Expected number of events across both arms}
+ \item{"HR": Expected Hazard Ratio (using the Pike method)}
+ \item{"LogHR": Log of the expected Hazard Ratio}
+ \item{"LogHR_SE": SE of the log of the expected Hazard Ratio}
+ \item{"Schoenfeld_Power": Estimated power based on Schoenfeld formula}
+ \item{"Frontier_Power": Estimated power based on Frontier method, using estimated event ratio at 0.5 power}
 }
 In addition, if the detailed_output argument is set to TRUE, the following additional columns are provided:
 \itemize{
- \item{"E_Events_Active"}{ Expected number of expected events in active arm}
- \item{"E_Events_Control"}{ Expected number of expected events in control arm}
- \item{"HR_CI_Upper"}{ Estimated Upper Bound of the CI for the Hazard Ratio}
- \item{"HR_CI_Lower"}{ Estimated Lower Bound of the CI for the Hazard Ratio}
- \item{"Peto_LogHR"}{ Expected Log Hazard Ratio using the Peto method}
- \item{"Expected_Z"}{ Estimated Z-score based on expected quantities for O, E and V, and log-rank test formula}
- \item{"Expected_P"}{ Estimated p-value based on estimated Z-score}
- \item{"Log_Rank_Stat"}{ Expected log-rank statistic}
- \item{"Variance"}{ Expected variance of LR-statistic by integration of V_function}
- \item{"V_Pike_Peto"}{ Expected variance based upon Pike and Peto approximations}
- \item{"Event_Ratio"}{ Expected ratio of events between arms; active divided by control}
- \item{"Event_Prop_Power"}{ Estimated power based on event proportion method, using event ratio rather than randomisation ratio}
- \item{"Z_Power"}{ Estimated power based on expected value of Z}
+ \item{"E_Events_Active": Expected number of expected events in active arm}
+ \item{"E_Events_Control": Expected number of expected events in control arm}
+ \item{"HR_CI_Upper": Estimated Upper Bound of the CI for the Hazard Ratio}
+ \item{"HR_CI_Lower": Estimated Lower Bound of the CI for the Hazard Ratio}
+ \item{"Peto_LogHR": Expected Log Hazard Ratio using the Peto method}
+ \item{"Expected_Z": Estimated Z-score based on expected quantities for O, E and V, and log-rank test formula}
+ \item{"Expected_P": Estimated p-value based on estimated Z-score}
+ \item{"Log_Rank_Stat": Expected log-rank statistic}
+ \item{"Variance": Expected variance of LR-statistic by integration of V_function}
+ \item{"V_Pike_Peto": Expected variance based upon Pike and Peto approximations}
+ \item{"Event_Ratio": Expected ratio of events between arms; active divided by control}
+ \item{"Event_Prop_Power": Estimated power based on event proportion method, using event ratio rather than randomisation ratio}
+ \item{"Z_Power": Estimated power based on expected value of Z}
 }
 If RMST calculations are requested, the following columns are included:
 \itemize{
- \item{"RMST_Restrict"}{ Specified RMST restriction time}
- \item{"RMST_Active"}{ Expected RMST for active arm}
- \item{"RMST_Control"}{ Expected RMST for control arm}
- \item{"RMST_Delta"}{ Absolute difference in expected RMSTs between arms (active minus control)}
- \item{"RMST_SE"}{ Estimated SE of the RMST delta}
- \item{"RMST_Z"}{ Estimated RMST Z score}
- \item{"RMST_Failure"}{ Estimated probability of RMST difference being uncomputable for the specified restriction time}
- \item{"RMST_Power"}{ Estimated RMST Power}
+ \item{"RMST_Restrict": Specified RMST restriction time}
+ \item{"RMST_Active": Expected RMST for active arm}
+ \item{"RMST_Control": Expected RMST for control arm}
+ \item{"RMST_Delta": Absolute difference in expected RMSTs between arms (active minus control)}
+ \item{"RMST_SE": Estimated SE of the RMST delta}
+ \item{"RMST_Z": Estimated RMST Z score}
+ \item{"RMST_Failure": Estimated probability of RMST difference being uncomputable for the specified restriction time}
+ \item{"RMST_Power": Estimated RMST Power}
 }
 If landmark calculations are requested, the following columns are included:
 \itemize{
- \item{"LM_Time"}{ Time of landmark analysis}
- \item{"LM_Active"}{ Expected Kaplan Meier estimate of active arm at landmark time }
- \item{"LM_Control"}{ Expected Kaplan Meier estimate of control arm at landmark time }
- \item{"LM_Delta"}{ Expected absolute difference in Kaplan Meiers estimates at landmark time (active-control) }
- \item{"LM_A_SE"}{ Estimated Greenwood SE for active arm at landmark time }
- \item{"LM_C_SE"}{ Estimated Greenwood SE for control arm at landmark time }
- \item{"LM_D_SE"}{ Estimated Greenwood SE for delta at landmark time }
- \item{"LM_Z"}{ Estimated landmark analysis Z-score based on Greenwood SE }
- \item{"LM_Power"}{ Estimated landmark analysis power based on Greenwood SE }
+ \item{"LM_Time": Time of landmark analysis}
+ \item{"LM_Active": Expected Kaplan Meier estimate of active arm at landmark time }
+ \item{"LM_Control": Expected Kaplan Meier estimate of control arm at landmark time }
+ \item{"LM_Delta": Expected absolute difference in Kaplan Meiers estimates at landmark time (active-control) }
+ \item{"LM_A_SE": Estimated Greenwood SE for active arm at landmark time }
+ \item{"LM_C_SE": Estimated Greenwood SE for control arm at landmark time }
+ \item{"LM_D_SE": Estimated Greenwood SE for delta at landmark time }
+ \item{"LM_Z": Estimated landmark analysis Z-score based on Greenwood SE }
+ \item{"LM_Power": Estimated landmark analysis power based on Greenwood SE }
 }
 If a required power is requested, the following column is included:
 \itemize{
- \item{"Estimated_SS"}{ Estimated sample size required, keeping constant all parameters other than rate of recruitment and total sample size}
+ \item{"Estimated_SS": Estimated sample size required, keeping constant all parameters other than rate of recruitment and total sample size}
 }
 }
 \description{

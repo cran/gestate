@@ -17,7 +17,7 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","
 #' @param assess Positive number for the assessment time at which administrative censoring will be performed.
 #' @param fix_events Positive integer for the number of events to fix (if required), letting the assessment time vary. Alternatively, NULL for fixed time assessment with variable event numbers. Notes: Fixing event numbers overrides any specified assessment time and slows simulation considerably. Default = NULL (fixed analysis time)
 #' @param iterations Number of simulations to perform. Depending on trial size, 10,000-20,000 is typically OK to analyse on 8GB RAM.
-#' @param seed Seed number to use. Numerical, although if "Rand" is specified, a system-time-derived number will be used.
+#' @param seed Seed number to use. Positive integer, although if 0 is specified, a system-time-derived number will be used.
 #' @param detailed_output Boolean to require full details of timings of competing processes. Full details required for any future adjustments to assessment time. Simplified option approximately halves RAM requirements. Default=FALSE (simplified).
 #' @param output_type "matrix" or "list" specifying the type of output required. "matrix" requests a single matrix with a column "iter" to denote the simulation, while "list" creates a list with one entry per simulation. Default="matrix".
 #' @param Time String specifying the name of the output time column. Default="Time"
@@ -30,16 +30,16 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("i","ETime","Rec_Time","
 #' @importFrom doParallel registerDoParallel
 #' @return Returns a table with one row per patient per simulation. Table contains the following columns:
 #' \itemize{
-#'  \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis. Named by Time argument.}
-#'  \item{"Event"}{ Simulated event indicator denoting censorings/events as 1/0 if censoringOne=TRUE and 0/1 if censoringOne=FALSE. Named by Event argument.}
-#'  \item{"Trt"}{ Treatment group number - 1 is active, 2 is control. Named by Trt argument.}
-#'  \item{"Iter"}{ Simulation number. Named by Iter argument.}
-#'  \item{"ETime"}{ Simulated actual event (patient) time (may or may not be observed). Only produced when detailed_output=TRUE.}
-#'  \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed).Only produced when detailed_output=TRUE.}
-#'  \item{"Rec_Time"}{ Simulated (trial) time of recruitment. Only produced when detailed_output=TRUE.}
-#'  \item{"Assess"}{ Prespecified (trial) time of assessment. Only produced when detailed_output=TRUE.}
-#'  \item{"Max_F"}{ Prespecified maximum patient follow-up time. Only produced when detailed_output=TRUE.}
-#'  \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed)}
+#'  \item{"Time": Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis. Named by Time argument.}
+#'  \item{"Event": Simulated event indicator denoting censorings/events as 1/0 if censoringOne=TRUE and 0/1 if censoringOne=FALSE. Named by Event argument.}
+#'  \item{"Trt": Treatment group number - 1 is control, 2 is active. Named by Trt argument.}
+#'  \item{"Iter": Simulation number. Named by Iter argument.}
+#'  \item{"ETime": Simulated actual event (patient) time (may or may not be observed). Only produced when detailed_output=TRUE.}
+#'  \item{"CTime": Simulated actual censoring/dropout (patient) time (may or may not be observed).Only produced when detailed_output=TRUE.}
+#'  \item{"Rec_Time": Simulated (trial) time of recruitment. Only produced when detailed_output=TRUE.}
+#'  \item{"Assess": Prespecified (trial) time of assessment. Only produced when detailed_output=TRUE.}
+#'  \item{"Max_F": Prespecified maximum patient follow-up time. Only produced when detailed_output=TRUE.}
+#'  \item{"RCTime": Simulated actual administrative censoring (patient) time (may or may not be observed)}
 #' }
 #' @author James Bell
 #' @examples
@@ -63,7 +63,7 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
   if(!testNumber(iterations, type = "positive", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the number of simulations using the 'iterations' argument")
   if(is.null(assess) ||(!is.null(fix_events) & assess < getLength(rcurve))){assess=ceiling(getLength(rcurve)+1)}
   if(!testNumber(assess, type = "positive",is.single=TRUE)) stop("Please specify a single positive number for the assessment time using the 'assess' argument")
-  if(!testNumber(seed, type = "positive", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the seed (or 0 for a random one) using the 'seed' argument")
+  if(!testNumber(seed, type = "positive0", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the seed (or 0 for a random one) using the 'seed' argument")
   if(!is.null(fix_events) && !testNumber(fix_events, type = "positive", integer = TRUE,is.single=TRUE)) stop("Fixed event assessment specified, but fix_events is not a positive integer.")
 
   #Strings
@@ -170,7 +170,7 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
 #' @param fix_events Positive integer for the number of events to fix (if required), letting the assessment time vary. Alternatively, NULL for fixed time assessment with variable event numbers. Notes: Fixing event numbers overrides any specified assessment time and slows simulation considerably. Default = NULL (fixed analysis time)
 #' @param stratum_name Name of the column defining the stratum. Default="Stratum".
 #' @param iterations Number of simulations to perform. Depending on trial size, 10,000-20,000 is typically OK to analyse on 8GB RAM.
-#' @param seed Seed number to use. Numerical, although if "Rand" is specified, a system-time-derived number will be used.
+#' @param seed Seed number to use. Positive integer, or if 0 is specified, a system-time-derived number will be used.
 #' @param detailed_output Boolean to require full details of timings of competing processes. Full details required for any future adjustments to assessment time. Simplified option approximately halves RAM requirements. Default=FALSE (simplified).
 #' @param output_type "matrix" or "list" specifying the type of output required. "matrix" requests a single matrix with a column "iter" to denote the simulation, while "list" creates a list with one entry per simulation. Default="matrix".
 #' @param Time String specifying the name of the output time column. Default="Time"
@@ -183,17 +183,17 @@ simulate_trials <- function(active_ecurve,control_ecurve,active_dcurve=Blank(),c
 #' @importFrom doParallel registerDoParallel
 #' @return Returns a table with one row per patient per simulation. Table contains the following columns:
 #' \itemize{
-#'  \item{"Time"}{ Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis. Named by Time argument.}
-#'  \item{"Event"}{ Simulated event indicator denoting censorings/events as 1/0 if censoringOne=TRUE and 0/1 if censoringOne=FALSE. Named by Event argument.}
-#'  \item{"Trt"}{ Treatment group number - 1 is active, 2 is control. Named by Trt argument.}
-#'  \item{"Iter"}{ Simulation number. Named by Iter argument.}
-#'  \item{"Stratum"}{ Stratum number. Column name will be the value of the stratum_name argument.)}
-#'  \item{"ETime"}{ Simulated actual event (patient) time (may or may not be observed). Only produced when detailed_output=TRUE.}
-#'  \item{"CTime"}{ Simulated actual censoring/dropout (patient) time (may or may not be observed).Only produced when detailed_output=TRUE.}
-#'  \item{"Rec_Time"}{ Simulated (trial) time of recruitment. Only produced when detailed_output=TRUE.}
-#'  \item{"Assess"}{ Prespecified (trial) time of assessment. Only produced when detailed_output=TRUE.}
-#'  \item{"Max_F"}{ Prespecified maximum patient follow-up time. Only produced when detailed_output=TRUE.}
-#'  \item{"RCTime"}{ Simulated actual administrative censoring (patient) time (may or may not be observed. Only produced when detailed_output=TRUE.)}
+#'  \item{"Time": Simulated actually observed (patient) time of event or censoring: This is the main column of interest for analysis. Named by Time argument.}
+#'  \item{"Event": Simulated event indicator denoting censorings/events as 1/0 if censoringOne=TRUE and 0/1 if censoringOne=FALSE. Named by Event argument.}
+#'  \item{"Trt": Treatment group number - 1 is control, 2 is active. Named by Trt argument.}
+#'  \item{"Iter": Simulation number. Named by Iter argument.}
+#'  \item{"Stratum": Stratum number. Column name will be the value of the stratum_name argument.)}
+#'  \item{"ETime": Simulated actual event (patient) time (may or may not be observed). Only produced when detailed_output=TRUE.}
+#'  \item{"CTime": Simulated actual censoring/dropout (patient) time (may or may not be observed).Only produced when detailed_output=TRUE.}
+#'  \item{"Rec_Time": Simulated (trial) time of recruitment. Only produced when detailed_output=TRUE.}
+#'  \item{"Assess": Prespecified (trial) time of assessment. Only produced when detailed_output=TRUE.}
+#'  \item{"Max_F": Prespecified maximum patient follow-up time. Only produced when detailed_output=TRUE.}
+#'  \item{"RCTime": Simulated actual administrative censoring (patient) time (may or may not be observed. Only produced when detailed_output=TRUE.)}
 #' }
 #' @author James Bell
 #' @examples
@@ -213,7 +213,7 @@ simulate_trials_strata <- function(stratum_probs,active_ecurve,control_ecurve,ac
   if(!testNumber(iterations, type = "positive", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the number of simulations using the 'iterations' argument")
   if(is.null(assess) ||(!is.null(fix_events) & assess < getLength(rcurve))){assess=ceiling(getLength(rcurve)+1)}
   if(!testNumber(assess, type = "positive",is.single=TRUE)) stop("Please specify a single positive number for the assessment time using the 'assess' argument")
-  if(!testNumber(seed, type = "positive", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the seed (or 0 for a random one) using the 'seed' argument")
+  if(!testNumber(seed, type = "positive0", integer = TRUE,is.single=TRUE)) stop("Please specify a single positive integer for the seed (or 0 for a random one) using the 'seed' argument")
   if(!is.null(fix_events) && !testNumber(fix_events, type = "positive", integer = TRUE,is.single=TRUE)) stop("Fixed event assessment specified, but fix_events is not a positive integer.")
 
   #Probabilities
@@ -508,7 +508,7 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
         data[[i]] <- cbind(data[[i]],Iter=Iteration)
       }
       data <- rbind(do.call("rbind",data))
-      data <- update_times_assess(data=data,assess=time,,censoringOne=censoringOne,Time=Time,Event=Event)
+      data <- update_times_assess(data=data,assess=time,censoringOne=censoringOne,Time=Time,Event=Event)
       data <- data[data[,"RCTime"]>=0,]
       if(!detailed_output){
         data <- subset(data,select=-c(ETime,Rec_Time,Assess,RCTime,CTime,Max_F))
@@ -581,33 +581,33 @@ set_assess_time <- function(data,time,output_type=c("input","matrix","list"),det
 #' @param Iter String specifying the name of the iterations column. Default="Iter"
 #' @return Returns a table with one row per simulation. Table contains the following columns:
 #' \itemize{
-#'  \item{"HR"}{ Cox Hazard Ratio (LR/Cox analysis only)}
-#'  \item{"LogHR"}{ Cox Log Hazard Ratio (LR/Cox analysis only)}
-#'  \item{"LogHR_SE"}{ Cox Standard Error of log Hazard Ratio (LR/Cox analysis only)}
-#'  \item{"HR_Z"}{ Cox Z-Score (LR/Cox analysis only)}
-#'  \item{"HR_P"}{ 1-sided Cox p-value (LR/Cox analysis only)}
-#'  \item{"LR_Z"}{ Log-Rank Test Z-Score (LR/Cox analysis only)}
-#'  \item{"LR_P"}{ 1-sided Log-Rank Test p-value (LR/Cox analysis only)}
-#'  \item{"Events_Active"}{ Events in Active arm (LR/Cox analysis only)}
-#'  \item{"Events_Control"}{ Events in Control arm (LR/Cox analysis only)}
-#'  \item{"RMST_Time"}{ RMST restriction time (RMST analysis only)}
-#'  \item{"RMST_Active"}{ RMST for Active arm (RMST analysis only)}
-#'  \item{"RMST_Active_SE"}{ RMST Standard Error for Active arm (RMST analysis only)}
-#'  \item{"RMST_Control"}{ RMST for Control arm (RMST analysis only)}
-#'  \item{"RMST_Control_SE"}{ RMST Standard Error for Control arm (RMST analysis only)}
-#'  \item{"RMST_Delta"}{ RMST difference between arms active-control (RMST analysis only)}
-#'  \item{"RMST_Delta_SE"}{ RMST difference between arms Standard Error (RMST analysis only)}
-#'  \item{"RMST_Z"}{ Z-score for RMST (RMST analysis only)}
-#'  \item{"RMST_P"}{ 1-sided RMST p-value (RMST analysis only)}
-#'  \item{"LM_Time"}{ Landmark time, i.e. time of survival function comparison  (Landmark analysis only)}
-#'  \item{"LM_Active"}{ Survival function for active arm at landmark time (Landmark analysis only)}
-#'  \item{"LM_Active_SE"}{ Greenwood standard error for active arm at landmark time (Landmark analysis only)}
-#'  \item{"LM_Control"}{ Survival function for control arm at landmark time (Landmark analysis only)}
-#'  \item{"LM_Control_SE"}{ Greenwood standard error for control arm at landmark time (Landmark analysis only)}
-#'  \item{"LM_Delta"}{ Survival function difference between arms active-control at landmark time (Landmark analysis only)}
-#'  \item{"LM_Delta_SE"}{ Greenwood standard error for difference between arms at landmark time (Landmark analysis only)}
-#'  \item{"LM_Z"}{ Z-score for landmark analysis (Landmark analysis only)}
-#'  \item{"LM_P"}{ 1-sided landmark analysis p-value (Landmark analysis only)}
+#'  \item{"HR": Cox Hazard Ratio (LR/Cox analysis only)}
+#'  \item{"LogHR": Cox Log Hazard Ratio (LR/Cox analysis only)}
+#'  \item{"LogHR_SE": Cox Standard Error of log Hazard Ratio (LR/Cox analysis only)}
+#'  \item{"HR_Z": Cox Z-Score (LR/Cox analysis only)}
+#'  \item{"HR_P": 1-sided Cox p-value (LR/Cox analysis only)}
+#'  \item{"LR_Z": Log-Rank Test Z-Score (LR/Cox analysis only)}
+#'  \item{"LR_P": 1-sided Log-Rank Test p-value (LR/Cox analysis only)}
+#'  \item{"Events_Active": Events in Active arm (LR/Cox analysis only)}
+#'  \item{"Events_Control": Events in Control arm (LR/Cox analysis only)}
+#'  \item{"RMST_Time": RMST restriction time (RMST analysis only)}
+#'  \item{"RMST_Active": RMST for Active arm (RMST analysis only)}
+#'  \item{"RMST_Active_SE": RMST Standard Error for Active arm (RMST analysis only)}
+#'  \item{"RMST_Control": RMST for Control arm (RMST analysis only)}
+#'  \item{"RMST_Control_SE": RMST Standard Error for Control arm (RMST analysis only)}
+#'  \item{"RMST_Delta": RMST difference between arms active-control (RMST analysis only)}
+#'  \item{"RMST_Delta_SE": RMST difference between arms Standard Error (RMST analysis only)}
+#'  \item{"RMST_Z": Z-score for RMST (RMST analysis only)}
+#'  \item{"RMST_P": 1-sided RMST p-value (RMST analysis only)}
+#'  \item{"LM_Time": Landmark time, i.e. time of survival function comparison  (Landmark analysis only)}
+#'  \item{"LM_Active": Survival function for active arm at landmark time (Landmark analysis only)}
+#'  \item{"LM_Active_SE": Greenwood standard error for active arm at landmark time (Landmark analysis only)}
+#'  \item{"LM_Control": Survival function for control arm at landmark time (Landmark analysis only)}
+#'  \item{"LM_Control_SE": Greenwood standard error for control arm at landmark time (Landmark analysis only)}
+#'  \item{"LM_Delta": Survival function difference between arms active-control at landmark time (Landmark analysis only)}
+#'  \item{"LM_Delta_SE": Greenwood standard error for difference between arms at landmark time (Landmark analysis only)}
+#'  \item{"LM_Z": Z-score for landmark analysis (Landmark analysis only)}
+#'  \item{"LM_P": 1-sided landmark analysis p-value (Landmark analysis only)}
 #' }
 #' @author James Bell
 #' @references Uno H, Claggett B, Tian L, Inoue E, Gallo P, Miyata T, Schrag D, Takeuchi M, Uyama Y, Zhao L,
@@ -749,13 +749,13 @@ analyse_sim <- function(data, LR = TRUE, RMST = NA, landmark = NA, stratum="",pa
 #' @param events Vector of indicators for whether each time is an event (1) or a censoring (0). Must be same length vector as time argument.
 #' @return Returns a list format lifetable with the following entries:
 #' \itemize{
-#'  \item{"n"}{Number of patients}
-#'  \item{"time"}{Vector of times}
-#'  \item{"n.risk"}{Vector of numbers of patients at risk at each time}
-#'  \item{"n.event"}{Vector of numbers of patients with an event at each time}
-#'  \item{"n.censor"}{Vector of numbers of patients censored at each time}
-#'  \item{"surv"}{Vector of estimates of Survival function at each time}
-#'  \item{"se"}{Vector of standard errors of estimates of Survival function at each time}
+#'  \item{"n": Number of patients}
+#'  \item{"time": Vector of times}
+#'  \item{"n.risk": Vector of numbers of patients at risk at each time}
+#'  \item{"n.event": Vector of numbers of patients with an event at each time}
+#'  \item{"n.censor": Vector of numbers of patients censored at each time}
+#'  \item{"surv": Vector of estimates of Survival function at each time}
+#'  \item{"se": Vector of standard errors of estimates of Survival function at each time}
 #' }
 #' @author James Bell
 #' @examples survfit_fast(c(1,2,3,3,4,5),c(1,0,1,1,0,1))
@@ -1110,39 +1110,39 @@ RMST_LM_cov_analysis <- function(i,data,restriction=NA,landmark=NA,stratum,Time,
 #' @param alpha1 1-sided alpha to be used for analysis. Default=0.025.
 #' @return Returns a table with one row. Table contains the following columns:
 #' \itemize{
-#'  \item{"Simulations"}{ Number of simulations conducted}
-#'  \item{"HR"}{ Exponent of Mean Cox Log Hazard Ratio (LR/Cox analysis only)}
-#'  \item{"LogHR"}{ Mean Cox Log Hazard Ratio (LR/Cox analysis only)}
-#'  \item{"LogHR_SE"}{ Root mean square of the Cox Standard Errors for Log Hazard Ratio (LR/Cox analysis only)}
-#'  \item{"HR_Z"}{ Mean Cox Z-Score (LR/Cox analysis only)}
-#'  \item{"HR_P"}{ p-value of Mean Cox Z-Score (LR/Cox analysis only)}
-#'  \item{"HR_Power"}{ Simulated power of Cox-regression (LR/Cox analysis only)}
-#'  \item{"HR_Failed"}{ Proportion of simulations failing to calculate a Cox HR (LR/Cox analysis only)}
-#'  \item{"LR_Z"}{ Mean Log-Rank Test Z-Score (LR/Cox analysis only)}
-#'  \item{"LR_P"}{ p-value of Mean Log-Rank Test Z-Score (LR/Cox analysis only)}
-#'  \item{"LR_Power"}{ Simulated power of the log-rank test (LR/Cox analysis only)}
-#'  \item{"LR_Failed"}{ Proportion of simulations failing to calculate a log-rank test statistic (LR/Cox analysis only)}
-#'  \item{"Events_Active"}{ Mean events in active arm (LR/Cox analysis only)}
-#'  \item{"Events_Control"}{ Mean events in control arm (LR/Cox analysis only)}
-#'  \item{"Events_Total"}{ Mean total events(LR/Cox analysis only)}
-#'  \item{"RMST_Time"}{ Restriction time for RMST analysis (RMST analysis only)}
-#'  \item{"RMST_Control"}{ Mean RMST for active arm (RMST analysis only)}
-#'  \item{"RMST_C_SE"}{ Root mean square of RMST Standard Errors for active arm (RMST analysis only)}
-#'  \item{"RMST_Active"}{ Mean RMST for control arm (RMST analysis only)}
-#'  \item{"RMST_A_SE"}{ Root mean square of RMST Standard Errors for control arm (RMST analysis only)}
-#'  \item{"RMST_Delta"}{ Mean RMST difference between arms active-control (RMST analysis only)}
-#'  \item{"RMST_D_SE"}{ Root mean square of RMST difference Standard Errors (RMST analysis only)}
-#'  \item{"RMST_Power"}{ Simulated power of RMST (RMST analysis only)}
-#'  \item{"RMST_Failed"}{ Proportion of simulations failing to calculate the RMST (RMST analysis only)}
-#'  \item{"LM_Time"}{ Landmark analysis time, i.e. assessment time of Survival function (Landmark analysis only)}
-#'  \item{"LM_Control"}{ Mean survival function for active arm at landmark time (Landmark analysis only)}
-#'  \item{"LM_C_SE"}{ Root mean square of Greenwood standard errors for active arm at landmark time (Landmark analysis only)}
-#'  \item{"LM_Active"}{ Mean survival function for control arm at landmark time (Landmark analysis only)}
-#'  \item{"LM_A_SE"}{ Root mean square of Greenwood standard errors for control arm at landmark time (Landmark analysis only)}
-#'  \item{"LM_Delta"}{ Mean survival function difference active-control at landmark time (Landmark analysis only)}
-#'  \item{"LM_D_SE"}{ Root mean square of Greenwood standard errors for survival differences at landmark time (Landmark analysis only)}
-#'  \item{"LM_Power"}{ Power of landmark analysis (Landmark analysis only)}
-#'  \item{"LM_Failed"}{ Proportion of simulations failing to calculate the survival difference at landmark time (Landmark analysis only)}
+#'  \item{"Simulations": Number of simulations conducted}
+#'  \item{"HR": Exponent of Mean Cox Log Hazard Ratio (LR/Cox analysis only)}
+#'  \item{"LogHR": Mean Cox Log Hazard Ratio (LR/Cox analysis only)}
+#'  \item{"LogHR_SE": Root mean square of the Cox Standard Errors for Log Hazard Ratio (LR/Cox analysis only)}
+#'  \item{"HR_Z": Mean Cox Z-Score (LR/Cox analysis only)}
+#'  \item{"HR_P": p-value of Mean Cox Z-Score (LR/Cox analysis only)}
+#'  \item{"HR_Power": Simulated power of Cox-regression (LR/Cox analysis only)}
+#'  \item{"HR_Failed": Proportion of simulations failing to calculate a Cox HR (LR/Cox analysis only)}
+#'  \item{"LR_Z": Mean Log-Rank Test Z-Score (LR/Cox analysis only)}
+#'  \item{"LR_P": p-value of Mean Log-Rank Test Z-Score (LR/Cox analysis only)}
+#'  \item{"LR_Power": Simulated power of the log-rank test (LR/Cox analysis only)}
+#'  \item{"LR_Failed": Proportion of simulations failing to calculate a log-rank test statistic (LR/Cox analysis only)}
+#'  \item{"Events_Active": Mean events in active arm (LR/Cox analysis only)}
+#'  \item{"Events_Control": Mean events in control arm (LR/Cox analysis only)}
+#'  \item{"Events_Total": Mean total events(LR/Cox analysis only)}
+#'  \item{"RMST_Time": Restriction time for RMST analysis (RMST analysis only)}
+#'  \item{"RMST_Control": Mean RMST for active arm (RMST analysis only)}
+#'  \item{"RMST_C_SE": Root mean square of RMST Standard Errors for active arm (RMST analysis only)}
+#'  \item{"RMST_Active": Mean RMST for control arm (RMST analysis only)}
+#'  \item{"RMST_A_SE": Root mean square of RMST Standard Errors for control arm (RMST analysis only)}
+#'  \item{"RMST_Delta": Mean RMST difference between arms active-control (RMST analysis only)}
+#'  \item{"RMST_D_SE": Root mean square of RMST difference Standard Errors (RMST analysis only)}
+#'  \item{"RMST_Power": Simulated power of RMST (RMST analysis only)}
+#'  \item{"RMST_Failed": Proportion of simulations failing to calculate the RMST (RMST analysis only)}
+#'  \item{"LM_Time": Landmark analysis time, i.e. assessment time of Survival function (Landmark analysis only)}
+#'  \item{"LM_Control": Mean survival function for active arm at landmark time (Landmark analysis only)}
+#'  \item{"LM_C_SE": Root mean square of Greenwood standard errors for active arm at landmark time (Landmark analysis only)}
+#'  \item{"LM_Active": Mean survival function for control arm at landmark time (Landmark analysis only)}
+#'  \item{"LM_A_SE": Root mean square of Greenwood standard errors for control arm at landmark time (Landmark analysis only)}
+#'  \item{"LM_Delta": Mean survival function difference active-control at landmark time (Landmark analysis only)}
+#'  \item{"LM_D_SE": Root mean square of Greenwood standard errors for survival differences at landmark time (Landmark analysis only)}
+#'  \item{"LM_Power": Power of landmark analysis (Landmark analysis only)}
+#'  \item{"LM_Failed": Proportion of simulations failing to calculate the survival difference at landmark time (Landmark analysis only)}
 #' }
 #' @author James Bell
 #' @examples example_sim <- simulate_trials(active_ecurve=Weibull(250,0.8),control_ecurve=Weibull(100,1),
